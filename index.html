@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>나만의 동물 백과사전</title>
+</head>
+<body>
+
+    <header>
+        <h2>나만의 동물 백과사전: 고양이</h2>
+        <p>제가 좋아하는 반려동물인 고양이에 대해 소개합니다.</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#intro">소개</a></li>
+            <li><a href="#info">기본 정보</a></li>
+            <li><a href="#traits">특징 및 먹이</a></li>
+            <li><a href="#video">관련 영상</a></li>
+            <li><a href="#contact">입양 문의</a></li>
+        </ul>
+    </nav>
+
+    <hr>
+
+    <section id="intro">
+        <article>
+            <h3>1. 고양이 소개</h3>
+            <img src="HTML5\media\cat1.png" alt="고양이 이미지" width="300">
+            <p>고양이는 오랫동안 사람과 함께 살아온 대표적인 반려동물입니다. 영리하고 유연하며 깔끔한 성격을 가지고 있습니다.</p>
+        </article>
+    </section>
+
+    <hr>
+
+    <section id="info">
+        <h3>2. 기본 정보</h3>
+        <table border="1">
+            <caption>고양이 주요 정보</caption>
+            <thead>
+                <tr>
+                    <th>항목</th>
+                    <th>상세 내용</th>
+                    <th>비고</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>학명</td>
+                    <td>Felis catus</td>
+                    <td rowspan="2">소형 포유류</td>
+                </tr>
+                <tr>
+                    <td>평균 수명</td>
+                    <td>12년 ~ 18년</td>
+                </tr>
+                <tr>
+                    <td>서식 환경</td>
+                    <td colspan="2">전 세계의 실내 및 야생 환경</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br>
+
+        <details>
+            <summary>고양이 연령별 추가 정보 (클릭)</summary>
+            <p><b>자묘(0~1세):</b> 호기심이 많고 활동량이 왕성합니다.</p>
+            <p><b>성묘(1~7세):</b> 성격이 안정되고 규칙적인 생활을 합니다.</p>
+        </details>
+    </section>
+
+    <hr>
+
+    <section id="traits">
+        <h3>3. 특징 및 먹이</h3>
+        
+        <h4>주요 특징</h4>
+        <ul>
+            <li>야간 시력이 뛰어나 어두운 곳에서도 잘 봅니다.</li>
+            <li>유연한 척추 구조를 가지고 있어 높은 곳도 잘 오른다.</li>
+            <li>그루밍을 통해 몸을 깨끗하게 유지합니다.</li>
+        </ul>
+
+        <h4>추천 먹이</h4>
+        <!-- ② 순서형 목록 ol -->
+        <ol type="1">
+            <li>고단백 건식/습식 사료</li>
+            <li>신선한 음용수</li>
+            <li>적절한 영양 간식</li>
+        </ol>
+    </section>
+
+    <hr>
+
+    <section id="video">
+        <h3>4. 관련 영상</h3>
+        <iframe width="400" height="225" src="https://youtu.be/OuBLoXxc5Q4?si=Z8amwLXV6tq6k_Ia" title="YouTube video" frameborder="0" allowfullscreen></iframe>
+    </section>
+
+    <hr>
+
+    <section id="contact">
+        <h3>5. 입양 문의하기</h3>
+        <form action="server.php" method="post">
+            <p>
+                <label for="username">성함: </label>
+                <input type="text" id="username" name="username" placeholder="홍길동" required>
+            </p>
+            <p>
+                <label for="useremail">이메일: </label>
+                <input type="email" id="useremail" name="useremail" placeholder="example@email.com">
+            </p>
+            <p>
+                <label for="visitdate">방문 희망일: </label>
+                <input type="date" id="visitdate" name="visitdate">
+            </p>
+            <p>
+                <label>반려동물 양육 경험: </label>
+                <input type="radio" id="exp1" name="experience" value="yes">
+                <label for="exp1">있음</label>
+                <input type="radio" id="exp2" name="experience" value="no" checked>
+                <label for="exp2">없음</label>
+            </p>
+            <p>
+                <label>관심 항목: </label>
+                <input type="checkbox" id="chk1" name="interest" value="adopt">
+                <label for="chk1">입양 절차</label>
+                <input type="checkbox" id="chk2" name="interest" value="care">
+                <label for="chk2">관리 방법</label>
+            </p>
+            <p>
+                <input type="submit" value="제출하기">
+                <input type="reset" value="다시 작성">
+            </p>
+        </form>
+    </section>
+
+</body>
+</html>
