@@ -24,6 +24,7 @@ const defaultData = {
   gpaScale: 4.5,
   selectedSemester: '1학년 1학기',
   subjects: [],
+  customStudyTopics: [],
   tasks: [],
   studyLogs: [],
   grades: [],
@@ -53,6 +54,7 @@ const guestDemoData = {
     { id: 't1', subject: '웹프로그래밍', title: '스토리보드 및 프로토타입 제출', due: '2026-11-26', tag: '과제', done: false },
     { id: 't2', subject: '컴퓨터개론', title: '기말 프로젝트 발표 준비', due: '2026-12-03', tag: '팀플', done: false }
   ],
+  customStudyTopics: ['자격증 공부', '코딩 테스트', '어학/토익'],
   studyLogs: [
     { subject: '웹프로그래밍', minutes: 80 },
     { subject: '컴퓨터개론', minutes: 45 }

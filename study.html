@@ -13,41 +13,99 @@
   <main class="container">
     <div class="page-header">
       <h1>⏱️ 집중 뽀모도로 타이머 & 과목별 학습 통계</h1>
-      <p>학습 과목과 목표 시간을 설정하고 백색소음과 함께 집중하세요. 종료 시 학습 통계 차트와 구글 시트에 자동 반영됩니다.</p>
+      <p>수강 강의뿐 아니라 자격증·어학·개인 목표 등 원하는 학습 항목을 직접 추가하고, 집중·쉬는 시간과 세트 반복을 설정해 보세요.</p>
     </div>
 
     <div class="grid-2">
       <section class="card" style="text-align:center;">
-        <div class="card-title">집중 타이머</div>
-        <div class="form-row" style="justify-content:center;">
-          <select id="studySubject"></select>
-          <select id="timerPreset" onchange="setPresetTime()">
-            <option value="25">25분 (기본 뽀모도로)</option>
-            <option value="50">50분 (심화 집중)</option>
-            <option value="10">10분 (짧은 복습)</option>
-            <option value="1">1분 (시연용 빠른 테스트)</option>
-          </select>
+        <div class="card-title">
+          <span>집중 타이머</span>
+          <span id="phaseBadge" class="badge">🔥 집중 시간</span>
         </div>
 
-        <div id="timerDisplay" style="font-size:4.2rem; font-weight:800; color:var(--primary); margin:20px 0; letter-spacing:2px;">
+        <!-- 학습 항목 선택 및 직접 추가 -->
+        <div class="form-row" style="justify-content:center; margin-bottom:10px;">
+          <select id="studySubject" style="min-width:170px; font-weight:700;"></select>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleCustomTopicBox()">+ 학습 항목 추가</button>
+        </div>
+
+        <div id="customTopicBox" style="display:none; background:var(--bg-color); border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-bottom:14px; text-align:left;">
+          <div style="font-size:0.84rem; font-weight:700; margin-bottom:8px;">📌 나만의 학습 항목 추가 / 관리 (강의 외 공부·독서·자격증 등)</div>
+          <div class="form-row" style="margin-bottom:8px;">
+            <input type="text" id="newCustomTopicInput" placeholder="예: 정보처리기사, 토익 RC, 독서" style="flex:2; min-width:140px;" />
+            <button type="button" class="btn btn-sm" onclick="addCustomTopic()">추가</button>
+          </div>
+          <div id="customTopicChips" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+        </div>
+
+        <!-- 집중 시간 / 쉬는 시간 / 반복 세트 설정 -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px; text-align:left;">
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:700; color:var(--text-sub); margin-bottom:4px;">🔥 집중 시간</label>
+            <select id="focusMinutesSelect" onchange="applyTimerSettings()" style="width:100%;">
+              <option value="25" selected>25분 (뽀모도로)</option>
+              <option value="50">50분 (심화 집중)</option>
+              <option value="40">40분</option>
+              <option value="15">15분</option>
+              <option value="10">10분</option>
+              <option value="1">1분 (테스트)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:700; color:var(--text-sub); margin-bottom:4px;">☕ 쉬는 시간</label>
+            <select id="breakMinutesSelect" onchange="applyTimerSettings()" style="width:100%;">
+              <option value="5" selected>5분 휴식</option>
+              <option value="10">10분 휴식</option>
+              <option value="15">15분 휴식</option>
+              <option value="1">1분 (테스트)</option>
+              <option value="0">휴식 없음</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:700; color:var(--text-sub); margin-bottom:4px;">🔁 반복 세트</label>
+            <select id="repeatSetsSelect" onchange="applyTimerSettings()" style="width:100%;">
+              <option value="1">1세트</option>
+              <option value="2">2세트 반복</option>
+              <option value="3">3세트 반복</option>
+              <option value="4" selected>4세트 반복</option>
+              <option value="6">6세트 반복</option>
+              <option value="8">8세트 반복</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 현재 세트 진행 상태 표시 -->
+        <div id="sessionStatusBox" style="background:var(--primary-soft); border-radius:12px; padding:8px 12px; margin-bottom:10px; font-size:0.86rem; font-weight:700; color:var(--text-main);">
+          현재 진행: <span id="setProgressText">1 / 4 세트</span> · <span id="phaseDescText">집중 타이머 대기 중</span>
+        </div>
+
+        <div id="timerDisplay" style="font-size:4.2rem; font-weight:800; color:var(--primary); margin:12px 0; letter-spacing:2px;">
           25:00
         </div>
 
-        <div class="form-row" style="justify-content:center; margin-bottom:18px;">
-          <button class="btn" onclick="startTimer()">▶ 시작</button>
+        <div class="form-row" style="justify-content:center; margin-bottom:16px;">
+          <button class="btn" id="startBtn" onclick="startTimer()">▶ 시작</button>
           <button class="btn btn-outline" onclick="pauseTimer()">⏸ 일시정지</button>
-          <button class="btn btn-outline" onclick="resetTimer()">🔄 초기화</button>
+          <button class="btn btn-outline" onclick="skipCurrentPhase()">⏭ 다음 단계</button>
+          <button class="btn btn-outline" onclick="resetTimer()">🔄 전체 초기화</button>
         </div>
 
-        <div style="padding-top:14px; border-top:1px solid var(--border-color);">
+        <!-- 알람 소리 및 백색소음 컨트롤 -->
+        <div style="padding-top:14px; border-top:1px solid var(--border-color); display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+          <button id="alarmToggleBtn" class="btn btn-outline btn-sm" onclick="toggleAlarmSound()">
+            🔔 종료 알람: 켜짐
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="playAlarmChime()">
+            🔊 알람 미리듣기
+          </button>
           <button id="noiseBtn" class="btn btn-outline btn-sm" onclick="toggleWhiteNoise()">
-            🌧️ 집중 백색소음 켜기 (Web Audio)
+            🌧️ 백색소음 켜기
           </button>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-title">📊 과목별 누적 공부 시간 (분)</div>
+        <div class="card-title">📊 항목별 누적 공부 시간 (분)</div>
         <div style="max-height:260px; display:flex; justify-content:center;">
           <canvas id="studyChart"></canvas>
         </div>
@@ -61,13 +119,111 @@
     initCommonUI('study');
 
     let timerInterval = null;
+    let phase = 'focus'; // 'focus' | 'break'
+    let currentSet = 1;
+    let totalSets = 4;
+    let focusMinutes = 25;
+    let breakMinutes = 5;
     let totalSeconds = 25 * 60;
     let remainingSeconds = 25 * 60;
+    let alarmEnabled = true;
     let chartInstance = null;
 
     let audioCtx = null;
     let noiseNode = null;
     let isPlayingNoise = false;
+
+    function toggleCustomTopicBox() {
+      const box = document.getElementById('customTopicBox');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function addCustomTopic() {
+      const input = document.getElementById('newCustomTopicInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const data = loadData();
+      data.customStudyTopics = data.customStudyTopics || [];
+      const existsInSub = (data.subjects || []).some(s => s.name === name);
+      if (existsInSub || data.customStudyTopics.includes(name)) {
+        alert('이미 목록에 있는 학습 항목입니다.');
+        return;
+      }
+      data.customStudyTopics.push(name);
+      saveData(data);
+      input.value = '';
+      populateSubjects(name);
+    }
+
+    function removeCustomTopic(name) {
+      const data = loadData();
+      data.customStudyTopics = (data.customStudyTopics || []).filter(t => t !== name);
+      saveData(data);
+      populateSubjects();
+    }
+
+    function populateSubjects(selectValue = null) {
+      const data = loadData();
+      const sel = document.getElementById('studySubject');
+      const prevSelected = selectValue || sel.value;
+
+      const courses = (data.subjects || []).map(s => s.name);
+      const customs = data.customStudyTopics || [];
+
+      let optionsHtml = '';
+      if (courses.length > 0) {
+        optionsHtml += `<optgroup label="📚 수강 강의">` +
+          courses.map(c => `<option value="${c}">${c}</option>`).join('') +
+          `</optgroup>`;
+      }
+      const extraList = customs.length > 0 ? customs : ['자율학습'];
+      optionsHtml += `<optgroup label="✏️ 일반 학습 항목">` +
+        extraList.map(t => `<option value="${t}">${t}</option>`).join('') +
+        `</optgroup>`;
+
+      sel.innerHTML = optionsHtml;
+      if (prevSelected && Array.from(sel.options).some(o => o.value === prevSelected)) {
+        sel.value = prevSelected;
+      }
+
+      const chipsEl = document.getElementById('customTopicChips');
+      if (customs.length === 0) {
+        chipsEl.innerHTML = '<span style="font-size:0.78rem; color:var(--text-sub);">추가된 개인 학습 항목이 없습니다.</span>';
+      } else {
+        chipsEl.innerHTML = customs.map(t => `
+          <span class="member-chip">
+            ${t}
+            <button type="button" title="삭제" onclick="removeCustomTopic('${t.replace(/'/g, "\'")}')">×</button>
+          </span>
+        `).join('');
+      }
+    }
+
+    function toggleAlarmSound() {
+      alarmEnabled = !alarmEnabled;
+      document.getElementById('alarmToggleBtn').textContent = alarmEnabled ? '🔔 종료 알람: 켜짐' : '🔕 종료 알람: 꺼짐';
+    }
+
+    function playAlarmChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 - E5 - G5 - C6 멜로디 알람
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.16);
+          gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.16);
+          gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + idx * 0.16 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.16 + 0.45);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.16);
+          osc.stop(ctx.currentTime + idx * 0.16 + 0.48);
+        });
+      } catch (e) {}
+    }
 
     function toggleWhiteNoise() {
       const btn = document.getElementById('noiseBtn');
@@ -89,19 +245,33 @@
         noiseNode.connect(audioCtx.destination);
         noiseNode.start(0);
         isPlayingNoise = true;
-        btn.textContent = '🔇 집중 백색소음 끄기';
+        btn.textContent = '🔇 백색소음 끄기';
       } else {
         if (noiseNode) noiseNode.stop();
         if (audioCtx) audioCtx.close();
         isPlayingNoise = false;
-        btn.textContent = '🌧️ 집중 백색소음 켜기 (Web Audio)';
+        btn.textContent = '🌧️ 백색소음 켜기';
       }
     }
 
-    function populateSubjects() {
-      const data = loadData();
-      const sel = document.getElementById('studySubject');
-      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="자율학습">자율학습</option>';
+    function updateStatusUI() {
+      const badge = document.getElementById('phaseBadge');
+      const setText = document.getElementById('setProgressText');
+      const descText = document.getElementById('phaseDescText');
+      const display = document.getElementById('timerDisplay');
+
+      setText.textContent = `${currentSet} / ${totalSets} 세트`;
+      if (phase === 'focus') {
+        badge.textContent = '🔥 집중 시간';
+        badge.className = 'badge badge-urgent';
+        descText.textContent = timerInterval ? '열심히 집중하는 중!' : '집중 타이머 준비됨';
+        display.style.color = 'var(--primary)';
+      } else {
+        badge.textContent = '☕ 쉬는 시간';
+        badge.className = 'badge badge-done';
+        descText.textContent = timerInterval ? '편안하게 휴식 중 (자동 전환)' : '휴식 타이머 일시정지';
+        display.style.color = 'var(--accent-mint)';
+      }
     }
 
     function updateDisplay() {
@@ -110,12 +280,59 @@
       document.getElementById('timerDisplay').textContent = `${m}:${s}`;
     }
 
-    function setPresetTime() {
+    function applyTimerSettings() {
       pauseTimer();
-      const mins = Number(document.getElementById('timerPreset').value);
-      totalSeconds = mins * 60;
+      focusMinutes = Number(document.getElementById('focusMinutesSelect').value);
+      breakMinutes = Number(document.getElementById('breakMinutesSelect').value);
+      totalSets = Number(document.getElementById('repeatSetsSelect').value);
+      currentSet = 1;
+      phase = 'focus';
+      totalSeconds = focusMinutes * 60;
       remainingSeconds = totalSeconds;
       updateDisplay();
+      updateStatusUI();
+    }
+
+    function handlePhaseComplete(isSkipped = false) {
+      if (alarmEnabled && !isSkipped) {
+        playAlarmChime();
+      }
+
+      if (phase === 'focus') {
+        if (!isSkipped) {
+          recordStudySession(focusMinutes);
+        }
+
+        // 쉬는 시간이 설정되어 있으면 휴식 단계로 자동 전환
+        if (breakMinutes > 0) {
+          phase = 'break';
+          totalSeconds = breakMinutes * 60;
+          remainingSeconds = totalSeconds;
+          updateDisplay();
+          updateStatusUI();
+          return;
+        }
+      }
+
+      // 휴식 종료 또는 휴식 없음 상태에서 다음 세트로 전환
+      if (currentSet < totalSets) {
+        currentSet++;
+        phase = 'focus';
+        totalSeconds = focusMinutes * 60;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+        updateStatusUI();
+      } else {
+        // 모든 세트 완료
+        pauseTimer();
+        currentSet = 1;
+        phase = 'focus';
+        totalSeconds = focusMinutes * 60;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+        updateStatusUI();
+        document.getElementById('phaseDescText').textContent = `🎉 전체 ${totalSets}세트 완주 완료!`;
+      }
     }
 
     function startTimer() {
@@ -125,23 +342,24 @@
           remainingSeconds--;
           updateDisplay();
         } else {
-          pauseTimer();
-          recordStudySession(Math.round(totalSeconds / 60));
-          alert('집중 시간 완료! 학습 기록이 자동 저장되었습니다.');
-          resetTimer();
+          handlePhaseComplete(false);
         }
       }, 1000);
+      updateStatusUI();
     }
 
     function pauseTimer() {
       clearInterval(timerInterval);
       timerInterval = null;
+      updateStatusUI();
+    }
+
+    function skipCurrentPhase() {
+      handlePhaseComplete(true);
     }
 
     function resetTimer() {
-      pauseTimer();
-      remainingSeconds = totalSeconds;
-      updateDisplay();
+      applyTimerSettings();
     }
 
     function recordStudySession(mins) {
@@ -171,7 +389,7 @@
       if (chartInstance) chartInstance.destroy();
       const labels = data.studyLogs.length ? data.studyLogs.map(l => l.subject) : ['기록 없음'];
       const values = data.studyLogs.length ? data.studyLogs.map(l => l.minutes) : [1];
-      const colors = data.studyLogs.length ? ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff'] : ['#e9ecef'];
+      const colors = data.studyLogs.length ? ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff', '#a29bfe'] : ['#e9ecef'];
 
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -190,6 +408,7 @@
     }
 
     populateSubjects();
+    applyTimerSettings();
     renderStudyStats();
   </script>
 </body>
