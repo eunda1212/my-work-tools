@@ -84,28 +84,31 @@
         </div>
 
         <div class="form-row" style="justify-content:center; margin-bottom:16px;">
-          <button class="btn" id="startBtn" onclick="startTimer()">▶ 시작</button>
-          <button class="btn btn-outline" onclick="pauseTimer()">⏸ 일시정지</button>
-          <button class="btn btn-outline" onclick="skipCurrentPhase()">⏭ 다음 단계</button>
-          <button class="btn btn-outline" onclick="resetTimer()">🔄 전체 초기화</button>
+          <button type="button" class="btn" id="startBtn" onclick="startTimer()">▶ 시작</button>
+          <button type="button" class="btn btn-outline" onclick="pauseTimer()">⏸ 일시정지</button>
+          <button type="button" class="btn btn-outline" onclick="skipCurrentPhase()">⏭ 다음 단계</button>
+          <button type="button" class="btn btn-outline" onclick="resetTimer()">🔄 전체 초기화</button>
         </div>
 
         <!-- 알람 소리 및 백색소음 컨트롤 -->
         <div style="padding-top:14px; border-top:1px solid var(--border-color); display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-          <button id="alarmToggleBtn" class="btn btn-outline btn-sm" onclick="toggleAlarmSound()">
+          <button type="button" id="alarmToggleBtn" class="btn btn-outline btn-sm" onclick="toggleAlarmSound()">
             🔔 종료 알람: 켜짐
           </button>
-          <button class="btn btn-outline btn-sm" onclick="playAlarmChime()">
+          <button type="button" class="btn btn-outline btn-sm" onclick="playAlarmChime()">
             🔊 알람 미리듣기
           </button>
-          <button id="noiseBtn" class="btn btn-outline btn-sm" onclick="toggleWhiteNoise()">
+          <button type="button" id="noiseBtn" class="btn btn-outline btn-sm" onclick="toggleWhiteNoise()">
             🌧️ 백색소음 켜기
           </button>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-title">📊 항목별 누적 공부 시간 (분)</div>
+        <div class="card-title">
+          <span>📊 항목별 누적 공부 시간</span>
+          <span id="totalStudyBadge" class="badge">총 0분</span>
+        </div>
         <div style="max-height:260px; display:flex; justify-content:center;">
           <canvas id="studyChart"></canvas>
         </div>
@@ -156,9 +159,10 @@
       populateSubjects(name);
     }
 
-    function removeCustomTopic(name) {
+    function removeCustomTopicByIndex(idx) {
       const data = loadData();
-      data.customStudyTopics = (data.customStudyTopics || []).filter(t => t !== name);
+      data.customStudyTopics = data.customStudyTopics || [];
+      data.customStudyTopics.splice(idx, 1);
       saveData(data);
       populateSubjects();
     }
@@ -173,14 +177,14 @@
 
       let optionsHtml = '';
       if (courses.length > 0) {
-        optionsHtml += `<optgroup label="📚 수강 강의">` +
+        optionsHtml += '<optgroup label="📚 수강 강의">' +
           courses.map(c => `<option value="${c}">${c}</option>`).join('') +
-          `</optgroup>`;
+          '</optgroup>';
       }
       const extraList = customs.length > 0 ? customs : ['자율학습'];
-      optionsHtml += `<optgroup label="✏️ 일반 학습 항목">` +
+      optionsHtml += '<optgroup label="✏️ 일반 학습 항목">' +
         extraList.map(t => `<option value="${t}">${t}</option>`).join('') +
-        `</optgroup>`;
+        '</optgroup>';
 
       sel.innerHTML = optionsHtml;
       if (prevSelected && Array.from(sel.options).some(o => o.value === prevSelected)) {
@@ -191,10 +195,10 @@
       if (customs.length === 0) {
         chipsEl.innerHTML = '<span style="font-size:0.78rem; color:var(--text-sub);">추가된 개인 학습 항목이 없습니다.</span>';
       } else {
-        chipsEl.innerHTML = customs.map(t => `
+        chipsEl.innerHTML = customs.map((t, idx) => `
           <span class="member-chip">
             ${t}
-            <button type="button" title="삭제" onclick="removeCustomTopic('${t.replace(/'/g, "\\'")}')">×</button>
+            <button type="button" title="삭제" onclick="removeCustomTopicByIndex(${idx})">×</button>
           </span>
         `).join('');
       }
@@ -208,7 +212,7 @@
     function playAlarmChime() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 - E5 - G5 - C6 멜로디 알람
+        const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -234,4 +238,201 @@
         const output = noiseBuffer.getChannelData(0);
         let lastOut = 0.0;
         for (let i = 0; i < bufferSize; i++) {
-          const white = Math.random() * 2
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = output[i];
+          output[i] *= 0.15;
+        }
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+        noiseNode.connect(audioCtx.destination);
+        noiseNode.start(0);
+        isPlayingNoise = true;
+        btn.textContent = '🔇 백색소음 끄기';
+      } else {
+        if (noiseNode) noiseNode.stop();
+        if (audioCtx) audioCtx.close();
+        isPlayingNoise = false;
+        btn.textContent = '🌧️ 백색소음 켜기';
+      }
+    }
+
+    function updateStatusUI() {
+      const badge = document.getElementById('phaseBadge');
+      const setText = document.getElementById('setProgressText');
+      const descText = document.getElementById('phaseDescText');
+      const display = document.getElementById('timerDisplay');
+
+      setText.textContent = `${currentSet} / ${totalSets} 세트`;
+      if (phase === 'focus') {
+        badge.textContent = '🔥 집중 시간';
+        badge.className = 'badge badge-urgent';
+        descText.textContent = timerInterval ? '열심히 집중하는 중!' : '집중 타이머 준비됨';
+        display.style.color = 'var(--primary)';
+      } else {
+        badge.textContent = '☕ 쉬는 시간';
+        badge.className = 'badge badge-done';
+        descText.textContent = timerInterval ? '편안하게 휴식 중 (자동 전환)' : '휴식 타이머 일시정지';
+        display.style.color = 'var(--accent-mint)';
+      }
+    }
+
+    function updateDisplay() {
+      const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+      const s = String(remainingSeconds % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+    }
+
+    function applyTimerSettings() {
+      pauseTimer();
+      focusMinutes = Number(document.getElementById('focusMinutesSelect').value);
+      breakMinutes = Number(document.getElementById('breakMinutesSelect').value);
+      totalSets = Number(document.getElementById('repeatSetsSelect').value);
+      currentSet = 1;
+      phase = 'focus';
+      totalSeconds = focusMinutes * 60;
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+      updateStatusUI();
+    }
+
+    function handlePhaseComplete(isSkipped = false) {
+      if (alarmEnabled && !isSkipped) {
+        playAlarmChime();
+      }
+
+      if (phase === 'focus') {
+        if (!isSkipped) {
+          recordStudySession(focusMinutes);
+        }
+
+        if (breakMinutes > 0) {
+          phase = 'break';
+          totalSeconds = breakMinutes * 60;
+          remainingSeconds = totalSeconds;
+          updateDisplay();
+          updateStatusUI();
+          return;
+        }
+      }
+
+      if (currentSet < totalSets) {
+        currentSet++;
+        phase = 'focus';
+        totalSeconds = focusMinutes * 60;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+        updateStatusUI();
+      } else {
+        pauseTimer();
+        currentSet = 1;
+        phase = 'focus';
+        totalSeconds = focusMinutes * 60;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+        updateStatusUI();
+        document.getElementById('phaseDescText').textContent = `🎉 전체 ${totalSets}세트 완주 완료!`;
+      }
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      timerInterval = setInterval(() => {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+          updateDisplay();
+        } else {
+          handlePhaseComplete(false);
+        }
+      }, 1000);
+      updateStatusUI();
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      updateStatusUI();
+    }
+
+    function skipCurrentPhase() {
+      handlePhaseComplete(true);
+    }
+
+    function resetTimer() {
+      applyTimerSettings();
+    }
+
+    function recordStudySession(mins) {
+      const data = loadData();
+      data.studyLogs = data.studyLogs || [];
+      const subject = document.getElementById('studySubject').value;
+      const existing = data.studyLogs.find(l => l.subject === subject);
+      if (existing) {
+        existing.minutes += mins;
+      } else {
+        data.studyLogs.push({ subject, minutes: mins });
+      }
+      saveData(data);
+      renderStudyStats();
+    }
+
+    function deleteStudyLog(idx) {
+      const data = loadData();
+      data.studyLogs = data.studyLogs || [];
+      data.studyLogs.splice(idx, 1);
+      saveData(data);
+      renderStudyStats();
+    }
+
+    function renderStudyStats() {
+      const data = loadData();
+      data.studyLogs = data.studyLogs || [];
+
+      const totalMinutes = data.studyLogs.reduce((sum, l) => sum + (Number(l.minutes) || 0), 0);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      const totalBadge = document.getElementById('totalStudyBadge');
+      totalBadge.textContent = hours > 0
+        ? `총 ${totalMinutes}분 (${hours}시간 ${mins}분)`
+        : `총 ${totalMinutes}분`;
+
+      const listEl = document.getElementById('studyLogList');
+      listEl.innerHTML = data.studyLogs.map((l, idx) => `
+        <li class="list-item">
+          <strong>${l.subject}</strong>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge">${l.minutes}분 누적</span>
+            <button type="button" class="btn btn-danger" onclick="deleteStudyLog(${idx})">삭제</button>
+          </div>
+        </li>
+      `).join('') || '<li class="list-item" style="color:var(--text-sub);">아직 기록된 집중 학습 시간이 없습니다.</li>';
+
+      const ctx = document.getElementById('studyChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      const labels = data.studyLogs.length ? data.studyLogs.map(l => l.subject) : ['기록 없음'];
+      const values = data.studyLogs.length ? data.studyLogs.map(l => l.minutes) : [1];
+      const colors = data.studyLogs.length ? ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff', '#a29bfe'] : ['#e9ecef'];
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+
+    populateSubjects();
+    applyTimerSettings();
+    renderStudyStats();
+  </script>
+</body>
+</html>
