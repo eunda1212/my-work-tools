@@ -7,7 +7,7 @@ const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 // ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
 const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
 // ★ 관리자 모드 진입 PIN 번호 (원하는 비밀번호로 변경 가능)
-const ADMIN_PIN = 'admin1234';
+const ADMIN_PIN = 'molemole';
 
 const SEMESTERS = [
   '1학년 1학기', '1학년 2학기',
