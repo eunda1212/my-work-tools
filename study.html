@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>집중 타이머 & 통계 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header id="main-header"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>⏱️ 집중 뽀모도로 타이머 & 과목별 학습 통계</h1>
+      <p>학습 과목과 목표 시간을 설정하고 백색소음과 함께 집중하세요. 종료 시 학습 통계 차트와 구글 시트에 자동 반영됩니다.</p>
+    </div>
+
+    <div class="grid-2">
+      <section class="card" style="text-align:center;">
+        <div class="card-title">집중 타이머</div>
+        <div class="form-row" style="justify-content:center;">
+          <select id="studySubject"></select>
+          <select id="timerPreset" onchange="setPresetTime()">
+            <option value="25">25분 (기본 뽀모도로)</option>
+            <option value="50">50분 (심화 집중)</option>
+            <option value="10">10분 (짧은 복습)</option>
+            <option value="1">1분 (시연용 빠른 테스트)</option>
+          </select>
+        </div>
+
+        <div id="timerDisplay" style="font-size:4.2rem; font-weight:800; color:var(--primary); margin:20px 0; letter-spacing:2px;">
+          25:00
+        </div>
+
+        <div class="form-row" style="justify-content:center; margin-bottom:18px;">
+          <button class="btn" onclick="startTimer()">▶ 시작</button>
+          <button class="btn btn-outline" onclick="pauseTimer()">⏸ 일시정지</button>
+          <button class="btn btn-outline" onclick="resetTimer()">🔄 초기화</button>
+        </div>
+
+        <div style="padding-top:14px; border-top:1px solid var(--border-color);">
+          <button id="noiseBtn" class="btn btn-outline btn-sm" onclick="toggleWhiteNoise()">
+            🌧️ 집중 백색소음 켜기 (Web Audio)
+          </button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title">📊 과목별 누적 공부 시간 (분)</div>
+        <div style="max-height:260px; display:flex; justify-content:center;">
+          <canvas id="studyChart"></canvas>
+        </div>
+        <ul id="studyLogList" class="item-list" style="margin-top:16px;"></ul>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('study');
+
+    let timerInterval = null;
+    let totalSeconds = 25 * 60;
+    let remainingSeconds = 25 * 60;
+    let chartInstance = null;
+
+    let audioCtx = null;
+    let noiseNode = null;
+    let isPlayingNoise = false;
+
+    function toggleWhiteNoise() {
+      const btn = document.getElementById('noiseBtn');
+      if (!isPlayingNoise) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const bufferSize = 2 * audioCtx.sampleRate;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = output[i];
+          output[i] *= 0.15;
+        }
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+        noiseNode.connect(audioCtx.destination);
+        noiseNode.start(0);
+        isPlayingNoise = true;
+        btn.textContent = '🔇 집중 백색소음 끄기';
+      } else {
+        if (noiseNode) noiseNode.stop();
+        if (audioCtx) audioCtx.close();
+        isPlayingNoise = false;
+        btn.textContent = '🌧️ 집중 백색소음 켜기 (Web Audio)';
+      }
+    }
+
+    function populateSubjects() {
+      const data = loadData();
+      const sel = document.getElementById('studySubject');
+      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="자율학습">자율학습</option>';
+    }
+
+    function updateDisplay() {
+      const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+      const s = String(remainingSeconds % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+    }
+
+    function setPresetTime() {
+      pauseTimer();
+      const mins = Number(document.getElementById('timerPreset').value);
+      totalSeconds = mins * 60;
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      timerInterval = setInterval(() => {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+          updateDisplay();
+        } else {
+          pauseTimer();
+          recordStudySession(Math.round(totalSeconds / 60));
+          alert('집중 시간 완료! 학습 기록이 자동 저장되었습니다.');
+          resetTimer();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+    }
+
+    function recordStudySession(mins) {
+      const data = loadData();
+      const subject = document.getElementById('studySubject').value;
+      const existing = data.studyLogs.find(l => l.subject === subject);
+      if (existing) {
+        existing.minutes += mins;
+      } else {
+        data.studyLogs.push({ subject, minutes: mins });
+      }
+      saveData(data);
+      renderStudyStats();
+    }
+
+    function renderStudyStats() {
+      const data = loadData();
+      const listEl = document.getElementById('studyLogList');
+      listEl.innerHTML = data.studyLogs.map(l => `
+        <li class="list-item">
+          <strong>${l.subject}</strong>
+          <span class="badge">${l.minutes}분 누적</span>
+        </li>
+      `).join('');
+
+      const ctx = document.getElementById('studyChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: data.studyLogs.map(l => l.subject),
+          datasets: [{
+            data: data.studyLogs.map(l => l.minutes),
+            backgroundColor: ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+
+    populateSubjects();
+    renderStudyStats();
+  </script>
+</body>
+</html>

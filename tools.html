@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시간표 & 온라인 DB 설정 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="main-header"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>🛠️ 주간 강의 시간표 빌더 & Google Apps Script DB 설정</h1>
+      <p>주간 시간표를 구성하고, 구글 스프레드시트 웹 앱 URL을 연결하여 온라인 자동 동기화를 활성화하세요.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- 시간표 생성기 -->
+      <section class="card">
+        <div class="card-title">🗓️ 주간 강의 시간표</div>
+        <form id="ttForm" class="form-row">
+          <select id="ttDay">
+            <option value="월">월요일</option>
+            <option value="화">화요일</option>
+            <option value="수">수요일</option>
+            <option value="목">목요일</option>
+            <option value="금">금요일</option>
+          </select>
+          <select id="ttPeriod">
+            <option value="1">1교시 (09:00)</option>
+            <option value="2">2교시 (10:00)</option>
+            <option value="3">3교시 (11:00)</option>
+            <option value="4">4교시 (13:00)</option>
+            <option value="5">5교시 (14:00)</option>
+            <option value="6">6교시 (15:00)</option>
+          </select>
+          <select id="ttSubject"></select>
+          <input type="text" id="ttRoom" placeholder="강의실 (예: 공학관 302)" style="flex:1;" />
+          <button type="submit" class="btn">추가</button>
+        </form>
+
+        <div style="overflow-x:auto;">
+          <table class="timetable" id="timetableGrid"></table>
+        </div>
+      </section>
+
+      <!-- 구글 앱스 스크립트 온라인 DB 연결 설정 -->
+      <section class="card">
+        <div class="card-title">☁️ Google Apps Script 온라인 DB 연동</div>
+        <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
+          구글 스프레드시트에서 배포한 <strong>Apps Script 웹 앱 URL</strong>을 입력하면, 데이터 변경 시 구글 시트에 실시간으로 자동 저장됩니다.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+          <label style="font-size:0.85rem; font-weight:700;">1. Apps Script 웹 앱 URL</label>
+          <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;" />
+
+          <label style="font-size:0.85rem; font-weight:700;">2. 사용자 식별 ID (학번 또는 닉네임)</label>
+          <input type="text" id="gasUserIdInput" placeholder="예: 20250890" style="width:100%;" />
+
+          <div class="form-row" style="margin-top:4px;">
+            <button class="btn" onclick="saveCloudSettings()">💾 연결 설정 저장</button>
+            <button class="btn btn-outline" onclick="pushNowToCloud()">⬆️ 현재 데이터 시트로 전송</button>
+            <button class="btn btn-outline" onclick="pullFromCloud()">⬇️ 시트에서 불러오기</button>
+          </div>
+        </div>
+
+        <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;" />
+
+        <div class="card-title" style="font-size:0.98rem;">📁 로컬 JSON 파일 백업</div>
+        <div class="form-row">
+          <button class="btn btn-outline btn-sm" onclick="exportJSON()">⬇️ JSON 다운로드</button>
+          <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" style="font-size:0.82rem;" />
+          <button class="btn btn-danger btn-sm" onclick="resetAllData()">초기화</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('tools');
+
+    function loadCloudForm() {
+      const cfg = getGasConfig();
+      document.getElementById('gasUrlInput').value = cfg.url;
+      document.getElementById('gasUserIdInput').value = cfg.userId;
+    }
+
+    function saveCloudSettings() {
+      const url = document.getElementById('gasUrlInput').value;
+      const uid = document.getElementById('gasUserIdInput').value;
+      saveGasConfig(url, uid);
+      alert('Google Apps Script 연결 설정이 저장되었습니다!');
+      location.reload();
+    }
+
+    function pushNowToCloud() {
+      const cfg = getGasConfig();
+      if (!cfg.url) {
+        alert('먼저 웹 앱 URL을 입력하고 저장해 주세요.');
+        return;
+      }
+      saveData(loadData());
+      alert('구글 스프레드시트로 현재 데이터를 전송했습니다!');
+    }
+
+    function populateSubjects() {
+      const data = loadData();
+      const sel = document.getElementById('ttSubject');
+      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="강의">강의</option>';
+    }
+
+    function renderTimetable() {
+      const data = loadData();
+      const days = ['월', '화', '수', '목', '금'];
+      let html = `<thead><tr><th>교시</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+
+      for (let p = 1; p <= 6; p++) {
+        html += `<tr><td><strong>${p}교시</strong></td>`;
+        days.forEach(d => {
+          const entry = data.timetable.find(item => item.day === d && Number(item.period) === p);
+          if (entry) {
+            html += `<td class="tt-filled" style="cursor:pointer;" title="클릭 시 삭제" onclick="removeTimetable('${d}', ${p})">
+              ${entry.subject}<br><span style="font-size:0.75rem; font-weight:400;">${entry.room || ''}</span>
+            </td>`;
+          } else {
+            html += `<td></td>`;
+          }
+        });
+        html += `</tr>`;
+      }
+      html += `</tbody>`;
+      document.getElementById('timetableGrid').innerHTML = html;
+    }
+
+    document.getElementById('ttForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      const day = document.getElementById('ttDay').value;
+      const period = Number(document.getElementById('ttPeriod').value);
+      const subject = document.getElementById('ttSubject').value;
+      const room = document.getElementById('ttRoom').value.trim();
+
+      data.timetable = data.timetable.filter(item => !(item.day === day && Number(item.period) === period));
+      data.timetable.push({ day, period, subject, room });
+      saveData(data);
+      document.getElementById('ttRoom').value = '';
+      renderTimetable();
+    });
+
+    function removeTimetable(day, period) {
+      const data = loadData();
+      data.timetable = data.timetable.filter(item => !(item.day === day && Number(item.period) === period));
+      saveData(data);
+      renderTimetable();
+    }
+
+    function exportJSON() {
+      const data = loadData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'campus_mate_backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          saveData(parsed);
+          alert('데이터가 성공적으로 복원되었습니다!');
+          location.reload();
+        } catch (err) {
+          alert('올바른 JSON 백업 파일이 아닙니다.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetAllData() {
+      if (confirm('모든 데이터를 초기 샘플 상태로 되돌리시겠습니까?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+    }
+
+    loadCloudForm();
+    populateSubjects();
+    renderTimetable();
+  </script>
+</body>
+</html>

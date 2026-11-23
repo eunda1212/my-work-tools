@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>과제·캘린더 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="main-header"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>📅 과제·시험 D-Day & 월간 캘린더</h1>
+      <p>일정을 등록하고 리스트 뷰와 캘린더 뷰를 자유롭게 전환하며 마감일을 관리하세요.</p>
+    </div>
+
+    <section class="card" style="margin-bottom:20px;">
+      <div class="card-title">새 과제·시험 등록</div>
+      <form id="taskForm" class="form-row">
+        <select id="taskSubject" required></select>
+        <select id="taskTag">
+          <option value="과제">과제</option>
+          <option value="시험">시험</option>
+          <option value="팀플">팀플</option>
+          <option value="퀴즈">퀴즈</option>
+        </select>
+        <input type="text" id="taskTitle" placeholder="할 일 내용 입력" required style="flex:2;" />
+        <input type="date" id="taskDue" required />
+        <button type="submit" class="btn">일정 추가</button>
+      </form>
+    </section>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div>
+        <button id="btnListView" class="btn btn-sm" onclick="switchView('list')">📋 리스트 뷰</button>
+        <button id="btnCalView" class="btn btn-outline btn-sm" onclick="switchView('calendar')">🗓️ 월간 캘린더 뷰</button>
+      </div>
+      <select id="filterSubject" onchange="renderTasks()" style="min-width:160px;">
+        <option value="ALL">전체 과목 보기</option>
+      </select>
+    </div>
+
+    <section id="listViewSection" class="card">
+      <div class="card-title">등록된 일정 목록 (마감일순 자동 정렬)</div>
+      <ul id="taskList" class="item-list"></ul>
+    </section>
+
+    <section id="calViewSection" class="card" style="display:none;">
+      <div class="card-title">
+        <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)">◀ 이전 달</button>
+        <span id="calMonthTitle">2026년 11월</span>
+        <button class="btn btn-outline btn-sm" onclick="changeMonth(1)">다음 달 ▶</button>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('schedule');
+    let currentYear = 2026;
+    let currentMonth = 10;
+
+    function populateSubjects() {
+      const data = loadData();
+      const sel = document.getElementById('taskSubject');
+      const filter = document.getElementById('filterSubject');
+      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="기타">기타</option>';
+      filter.innerHTML = '<option value="ALL">전체 과목 보기</option>' +
+        data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    }
+
+    function switchView(mode) {
+      document.getElementById('listViewSection').style.display = mode === 'list' ? 'block' : 'none';
+      document.getElementById('calViewSection').style.display = mode === 'calendar' ? 'block' : 'none';
+      document.getElementById('btnListView').className = mode === 'list' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+      document.getElementById('btnCalView').className = mode === 'calendar' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+      if (mode === 'calendar') renderCalendar();
+    }
+
+    function renderTasks() {
+      const data = loadData();
+      const filterVal = document.getElementById('filterSubject').value;
+      let tasks = [...data.tasks].sort((a, b) => new Date(a.due) - new Date(b.due));
+      if (filterVal !== 'ALL') tasks = tasks.filter(t => t.subject === filterVal);
+
+      const listEl = document.getElementById('taskList');
+      listEl.innerHTML = tasks.map(t => `
+        <li class="list-item">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${t.id}')" />
+            <span class="badge ${t.done ? 'badge-done' : 'badge-urgent'}">${t.done ? '완료' : calcDDay(t.due)}</span>
+            <span class="badge">${t.tag}</span>
+            <span class="${t.done ? 'completed-text' : ''}"><strong>[${t.subject}]</strong> ${t.title}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.85rem; color:var(--text-sub);">${t.due}</span>
+            <button class="btn btn-danger" onclick="deleteTask('${t.id}')">삭제</button>
+          </div>
+        </li>
+      `).join('') || '<li class="list-item">해당 조건의 일정이 없습니다.</li>';
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const data = loadData();
+      document.getElementById('calMonthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
+      const grid = document.getElementById('calendarGrid');
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      for (let i = 0; i < firstDay; i++) {
+        html += `<div class="cal-cell" style="opacity:0.4;"></div>`;
+      }
+
+      for (let d = 1; d <= lastDate; d++) {
+        const mm = String(currentMonth + 1).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        const dateStr = `${currentYear}-${mm}-${dd}`;
+        const dayTasks = data.tasks.filter(t => t.due === dateStr);
+        const eventsHtml = dayTasks.map(t => `<div class="cal-event">[${t.subject}] ${t.title}</div>`).join('');
+        html += `
+          <div class="cal-cell">
+            <div class="date-num">${d}</div>
+            ${eventsHtml}
+          </div>
+        `;
+      }
+      grid.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      renderCalendar();
+    }
+
+    document.getElementById('taskForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      data.tasks.push({
+        id: 't' + Date.now(),
+        subject: document.getElementById('taskSubject').value,
+        tag: document.getElementById('taskTag').value,
+        title: document.getElementById('taskTitle').value.trim(),
+        due: document.getElementById('taskDue').value,
+        done: false
+      });
+      saveData(data);
+      document.getElementById('taskTitle').value = '';
+      renderTasks();
+    });
+
+    function toggleTask(id) {
+      const data = loadData();
+      const item = data.tasks.find(t => t.id === id);
+      if (item) item.done = !item.done;
+      saveData(data);
+      renderTasks();
+    }
+
+    function deleteTask(id) {
+      const data = loadData();
+      data.tasks = data.tasks.filter(t => t.id !== id);
+      saveData(data);
+      renderTasks();
+    }
+
+    populateSubjects();
+    renderTasks();
+  </script>
+</body>
+</html>

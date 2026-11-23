@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>학점 시뮬레이터 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="main-header"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>📊 학점 & 졸업 이수 시뮬레이터</h1>
+      <p>이번 학기 예상 성적을 입력해 평균 평점을 계산하고, 졸업 요건(전공/교양 학점) 달성률을 확인하세요.</p>
+    </div>
+
+    <div class="grid-2">
+      <section class="card">
+        <div class="card-title">목표 평점 달성 시뮬레이터</div>
+        <div style="margin-bottom:14px;">
+          <label style="font-weight:600;">목표 평점 설정: <span id="targetGpaLabel" style="color:var(--primary);">4.00</span> / 4.5</label>
+          <input type="range" id="targetGpaSlider" min="2.0" max="4.5" step="0.05" value="4.0" style="width:100%; margin-top:6px;" oninput="updateTargetGpa(this.value)" />
+        </div>
+
+        <div class="stat-big" id="currentGpaText">0.00 / 4.50</div>
+        <div class="progress-wrap">
+          <div class="progress-fill" id="gpaProgressBar" style="width:0%;"></div>
+        </div>
+        <p id="gpaAdvice" style="font-size:0.9rem; color:var(--text-sub); margin-bottom:16px;"></p>
+
+        <form id="gradeForm" class="form-row">
+          <input type="text" id="gSubject" placeholder="과목명" required style="flex:2;" />
+          <select id="gCredit">
+            <option value="3">3학점</option>
+            <option value="2">2학점</option>
+            <option value="1">1학점</option>
+          </select>
+          <select id="gType">
+            <option value="전공">전공</option>
+            <option value="교양">교양</option>
+          </select>
+          <select id="gScore">
+            <option value="A+">A+ (4.5)</option>
+            <option value="A0">A0 (4.0)</option>
+            <option value="B+">B+ (3.5)</option>
+            <option value="B0">B0 (3.0)</option>
+            <option value="C+">C+ (2.5)</option>
+            <option value="C0">C0 (2.0)</option>
+            <option value="F">F (0.0)</option>
+          </select>
+          <button type="submit" class="btn">추가</button>
+        </form>
+
+        <ul id="gradeList" class="item-list"></ul>
+      </section>
+
+      <section class="card">
+        <div class="card-title">🎓 졸업 요건 이수 현황 (기이수 + 이번 학기)</div>
+        <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
+          졸업 기준(총 130학점 / 전공 65학점 / 교양 35학점) 대비 현재 예상 이수율입니다.
+        </p>
+
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; font-weight:600;">
+            <span>총 이수 학점</span>
+            <span id="totalCreditStat">0 / 130학점</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-fill" id="barTotal" style="width:0%;"></div></div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; font-weight:600;">
+            <span>전공 이수 학점</span>
+            <span id="majorCreditStat">0 / 65학점</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-fill" id="barMajor" style="width:0%;"></div></div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; font-weight:600;">
+            <span>교양 이수 학점</span>
+            <span id="liberalCreditStat">0 / 35학점</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-fill" id="barLiberal" style="width:0%;"></div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('grade');
+
+    function updateTargetGpa(val) {
+      const data = loadData();
+      data.targetGpa = Number(val);
+      saveData(data);
+      renderGrades();
+    }
+
+    function renderGrades() {
+      const data = loadData();
+      const target = Number(data.targetGpa);
+      document.getElementById('targetGpaSlider').value = target;
+      document.getElementById('targetGpaLabel').textContent = target.toFixed(2);
+
+      const gpa = calculateGPA(data.grades);
+      document.getElementById('currentGpaText').textContent = `${gpa.toFixed(2)} / 4.50`;
+      const pct = Math.min(100, (gpa / target) * 100);
+      document.getElementById('gpaProgressBar').style.width = `${pct}%`;
+
+      const diff = (target - gpa).toFixed(2);
+      document.getElementById('gpaAdvice').textContent = diff <= 0
+        ? '🎉 축하합니다! 설정한 목표 평점을 달성했습니다.'
+        : `목표 평점(${target.toFixed(2)})까지 ${diff}점 더 필요합니다.`;
+
+      const listEl = document.getElementById('gradeList');
+      listEl.innerHTML = data.grades.map((g, idx) => `
+        <li class="list-item">
+          <div>
+            <span class="badge">${g.type}</span>
+            <strong>${g.subject}</strong> (${g.credit}학점) - <strong>${g.grade}</strong>
+          </div>
+          <button class="btn btn-danger" onclick="deleteGrade(${idx})">삭제</button>
+        </li>
+      `).join('');
+
+      const validGrades = data.grades.filter(g => g.grade !== 'F');
+      const curTotal = validGrades.reduce((s, g) => s + Number(g.credit), 0) + data.gradGoal.prevEarned;
+      const curMajor = validGrades.filter(g => g.type === '전공').reduce((s, g) => s + Number(g.credit), 0) + data.gradGoal.prevMajor;
+      const curLiberal = validGrades.filter(g => g.type === '교양').reduce((s, g) => s + Number(g.credit), 0) + data.gradGoal.prevLiberal;
+
+      document.getElementById('totalCreditStat').textContent = `${curTotal} / ${data.gradGoal.total}학점`;
+      document.getElementById('barTotal').style.width = `${Math.min(100, (curTotal / data.gradGoal.total) * 100)}%`;
+
+      document.getElementById('majorCreditStat').textContent = `${curMajor} / ${data.gradGoal.major}학점`;
+      document.getElementById('barMajor').style.width = `${Math.min(100, (curMajor / data.gradGoal.major) * 100)}%`;
+
+      document.getElementById('liberalCreditStat').textContent = `${curLiberal} / ${data.gradGoal.liberal}학점`;
+      document.getElementById('barLiberal').style.width = `${Math.min(100, (curLiberal / data.gradGoal.liberal) * 100)}%`;
+    }
+
+    document.getElementById('gradeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      data.grades.push({
+        subject: document.getElementById('gSubject').value.trim(),
+        credit: Number(document.getElementById('gCredit').value),
+        type: document.getElementById('gType').value,
+        grade: document.getElementById('gScore').value
+      });
+      saveData(data);
+      document.getElementById('gSubject').value = '';
+      renderGrades();
+    });
+
+    function deleteGrade(idx) {
+      const data = loadData();
+      data.grades.splice(idx, 1);
+      saveData(data);
+      renderGrades();
+    }
+
+    renderGrades();
+  </script>
+</body>
+</html>

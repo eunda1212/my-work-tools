@@ -1,140 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>나만의 동물 백과사전</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAMPUS MATE - 통합 학업 대시보드</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header id="main-header"></header>
 
-    <header>
-        <h2>나만의 동물 백과사전: 고양이</h2>
-        <p>제가 좋아하는 반려동물인 고양이에 대해 소개합니다.</p>
-    </header>
+  <main class="container">
+    <div class="page-header">
+      <h1>환영합니다! 오늘의 학업 현황을 한눈에 확인하세요 👋</h1>
+      <p>카드를 클릭하면 각 상세 페이지로 이동합니다. 수강 과목을 등록하면 모든 페이지 및 구글 시트에 자동 연동됩니다.</p>
+    </div>
 
-    <nav>
-        <ul>
-            <li><a href="#intro">소개</a></li>
-            <li><a href="#info">기본 정보</a></li>
-            <li><a href="#traits">특징 및 먹이</a></li>
-            <li><a href="#video">관련 영상</a></li>
-            <li><a href="#contact">입양 문의</a></li>
-        </ul>
-    </nav>
+    <div class="grid-4">
+      <a href="schedule.html" class="card card-link">
+        <div class="card-title">📌 남은 과제·시험 <span class="badge">이동 →</span></div>
+        <div class="stat-big" id="dash-task-count">0건</div>
+        <p style="color:var(--text-sub); font-size:0.88rem;" id="dash-next-task">등록된 일정이 없습니다.</p>
+      </a>
 
-    <hr>
+      <a href="study.html" class="card card-link">
+        <div class="card-title">⏱️ 누적 학습 시간 <span class="badge">이동 →</span></div>
+        <div class="stat-big" id="dash-study-time">0분</div>
+        <p style="color:var(--text-sub); font-size:0.88rem;">뽀모도로 타이머로 집중 기록</p>
+      </a>
 
-    <section id="intro">
-        <article>
-            <h3>1. 고양이 소개</h3>
-            <img src="HTML5\media\cat1.png" alt="고양이 이미지" width="300">
-            <p>고양이는 오랫동안 사람과 함께 살아온 대표적인 반려동물입니다. 영리하고 유연하며 깔끔한 성격을 가지고 있습니다.</p>
-        </article>
-    </section>
+      <a href="grade.html" class="card card-link">
+        <div class="card-title">📊 예상 평균 평점 <span class="badge">이동 →</span></div>
+        <div class="stat-big" id="dash-gpa">0.00</div>
+        <p style="color:var(--text-sub); font-size:0.88rem;" id="dash-gpa-goal">목표 평점: 4.00 / 4.5</p>
+      </a>
 
-    <hr>
+      <a href="team.html" class="card card-link">
+        <div class="card-title">🤝 진행 중인 팀플 <span class="badge">이동 →</span></div>
+        <div class="stat-big" id="dash-team-count">0건</div>
+        <p style="color:var(--text-sub); font-size:0.88rem;">칸반 보드 및 회의록 관리</p>
+      </a>
+    </div>
 
-    <section id="info">
-        <h3>2. 기본 정보</h3>
-        <table border="1">
-            <caption>고양이 주요 정보</caption>
-            <thead>
-                <tr>
-                    <th>항목</th>
-                    <th>상세 내용</th>
-                    <th>비고</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>학명</td>
-                    <td>Felis catus</td>
-                    <td rowspan="2">소형 포유류</td>
-                </tr>
-                <tr>
-                    <td>평균 수명</td>
-                    <td>12년 ~ 18년</td>
-                </tr>
-                <tr>
-                    <td>서식 환경</td>
-                    <td colspan="2">전 세계의 실내 및 야생 환경</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <br>
-
-        <details>
-            <summary>고양이 연령별 추가 정보 (클릭)</summary>
-            <p><b>자묘(0~1세):</b> 호기심이 많고 활동량이 왕성합니다.</p>
-            <p><b>성묘(1~7세):</b> 성격이 안정되고 규칙적인 생활을 합니다.</p>
-        </details>
-    </section>
-
-    <hr>
-
-    <section id="traits">
-        <h3>3. 특징 및 먹이</h3>
-        
-        <h4>주요 특징</h4>
-        <ul>
-            <li>야간 시력이 뛰어나 어두운 곳에서도 잘 봅니다.</li>
-            <li>유연한 척추 구조를 가지고 있어 높은 곳도 잘 오른다.</li>
-            <li>그루밍을 통해 몸을 깨끗하게 유지합니다.</li>
-        </ul>
-
-        <h4>추천 먹이</h4>
-        <!-- ② 순서형 목록 ol -->
-        <ol type="1">
-            <li>고단백 건식/습식 사료</li>
-            <li>신선한 음용수</li>
-            <li>적절한 영양 간식</li>
-        </ol>
-    </section>
-
-    <hr>
-
-    <section id="video">
-        <h3>4. 관련 영상</h3>
-        <iframe width="400" height="225" src="https://youtu.be/OuBLoXxc5Q4?si=Z8amwLXV6tq6k_Ia" title="YouTube video" frameborder="0" allowfullscreen></iframe>
-    </section>
-
-    <hr>
-
-    <section id="contact">
-        <h3>5. 입양 문의하기</h3>
-        <form action="server.php" method="post">
-            <p>
-                <label for="username">성함: </label>
-                <input type="text" id="username" name="username" placeholder="홍길동" required>
-            </p>
-            <p>
-                <label for="useremail">이메일: </label>
-                <input type="email" id="useremail" name="useremail" placeholder="example@email.com">
-            </p>
-            <p>
-                <label for="visitdate">방문 희망일: </label>
-                <input type="date" id="visitdate" name="visitdate">
-            </p>
-            <p>
-                <label>반려동물 양육 경험: </label>
-                <input type="radio" id="exp1" name="experience" value="yes">
-                <label for="exp1">있음</label>
-                <input type="radio" id="exp2" name="experience" value="no" checked>
-                <label for="exp2">없음</label>
-            </p>
-            <p>
-                <label>관심 항목: </label>
-                <input type="checkbox" id="chk1" name="interest" value="adopt">
-                <label for="chk1">입양 절차</label>
-                <input type="checkbox" id="chk2" name="interest" value="care">
-                <label for="chk2">관리 방법</label>
-            </p>
-            <p>
-                <input type="submit" value="제출하기">
-                <input type="reset" value="다시 작성">
-            </p>
+    <div class="grid-2">
+      <section class="card">
+        <div class="card-title">📚 내 수강 과목 등록 (전체 페이지 연동)</div>
+        <form id="subjectForm" class="form-row">
+          <input type="text" id="subName" placeholder="과목명 (예: 자료구조)" required style="flex:2;" />
+          <input type="text" id="subProf" placeholder="교수명" style="flex:1;" />
+          <select id="subCredit">
+            <option value="3">3학점</option>
+            <option value="2">2학점</option>
+            <option value="1">1학점</option>
+          </select>
+          <select id="subType">
+            <option value="전공">전공</option>
+            <option value="교양">교양</option>
+          </select>
+          <button type="submit" class="btn">등록</button>
         </form>
-    </section>
+        <ul id="subjectList" class="item-list"></ul>
+      </section>
 
+      <section class="card">
+        <div class="card-title">
+          <span>🔥 마감 임박 일정 TOP 3</span>
+          <a href="schedule.html" class="btn btn-outline btn-sm">전체보기</a>
+        </div>
+        <ul id="dashTaskList" class="item-list"></ul>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('index');
+
+    function renderDashboard() {
+      const data = loadData();
+      const pendingTasks = data.tasks.filter(t => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due));
+      document.getElementById('dash-task-count').textContent = `${pendingTasks.length}건`;
+      document.getElementById('dash-next-task').textContent = pendingTasks[0]
+        ? `가장 급함: [${pendingTasks[0].subject}] ${pendingTasks[0].title} (${calcDDay(pendingTasks[0].due)})`
+        : '모든 과제를 완료했습니다!';
+
+      const totalMin = data.studyLogs.reduce((sum, item) => sum + item.minutes, 0);
+      document.getElementById('dash-study-time').textContent = `${totalMin}분`;
+
+      const gpa = calculateGPA(data.grades);
+      document.getElementById('dash-gpa').textContent = gpa.toFixed(2);
+      document.getElementById('dash-gpa-goal').textContent = `목표 평점: ${Number(data.targetGpa).toFixed(2)} / 4.5`;
+
+      const activeTeam = data.teamTasks.filter(t => t.status !== 'done').length;
+      document.getElementById('dash-team-count').textContent = `${activeTeam}건`;
+
+      const subList = document.getElementById('subjectList');
+      subList.innerHTML = data.subjects.map(s => `
+        <li class="list-item">
+          <div>
+            <span class="badge">${s.type}</span>
+            <strong>${s.name}</strong>
+            <span style="color:var(--text-sub); font-size:0.85rem;">(${s.prof || '미지정'} · ${s.credit}학점)</span>
+          </div>
+          <button class="btn btn-danger" onclick="deleteSubject('${s.id}')">삭제</button>
+        </li>
+      `).join('');
+
+      const dashTasks = document.getElementById('dashTaskList');
+      dashTasks.innerHTML = pendingTasks.slice(0, 3).map(t => `
+        <li class="list-item">
+          <div>
+            <span class="badge badge-urgent">${calcDDay(t.due)}</span>
+            <strong>[${t.subject}]</strong> ${t.title}
+          </div>
+          <span style="font-size:0.82rem; color:var(--text-sub);">${t.due}</span>
+        </li>
+      `).join('') || '<li class="list-item">남은 일정이 없습니다 🎉</li>';
+    }
+
+    document.getElementById('subjectForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      const name = document.getElementById('subName').value.trim();
+      const prof = document.getElementById('subProf').value.trim();
+      const credit = Number(document.getElementById('subCredit').value);
+      const type = document.getElementById('subType').value;
+      if (!name) return;
+
+      data.subjects.push({ id: 's' + Date.now(), name, prof, credit, type });
+      saveData(data);
+      e.target.reset();
+      renderDashboard();
+    });
+
+    function deleteSubject(id) {
+      const data = loadData();
+      data.subjects = data.subjects.filter(s => s.id !== id);
+      saveData(data);
+      renderDashboard();
+    }
+
+    renderDashboard();
+  </script>
 </body>
 </html>

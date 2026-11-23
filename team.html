@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>팀플 매니저 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="main-header"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>🤝 팀플 역할 분담 칸반 보드 & 회의록</h1>
+      <p>팀원별 역할을 배정하고 진행 상태를 단계별로 이동시키며 회의 내용을 기록하세요.</p>
+    </div>
+
+    <section class="card" style="margin-bottom:20px;">
+      <div class="card-title">새 팀플 업무 배정</div>
+      <form id="teamTaskForm" class="form-row">
+        <input type="text" id="tMember" placeholder="담당 팀원 이름" required />
+        <input type="text" id="tDesc" placeholder="담당 역할 및 할 일 내용" required style="flex:2;" />
+        <button type="submit" class="btn">역할 배정</button>
+      </form>
+    </section>
+
+    <div class="grid-3">
+      <div class="kanban-col">
+        <div class="card-title">📝 할 일 (To Do)</div>
+        <div id="col-todo"></div>
+      </div>
+      <div class="kanban-col">
+        <div class="card-title">🔥 진행 중 (Doing)</div>
+        <div id="col-doing"></div>
+      </div>
+      <div class="kanban-col">
+        <div class="card-title">✅ 완료 (Done)</div>
+        <div id="col-done"></div>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-title">🗒️ 팀 회의록 기록</div>
+      <form id="meetingForm" class="form-row">
+        <input type="date" id="mDate" required />
+        <input type="text" id="mMembers" placeholder="참석자 (예: 이다은, 김민수)" required />
+        <input type="text" id="mNote" placeholder="주요 결정 사항 및 회의 내용" required style="flex:2;" />
+        <button type="submit" class="btn">회의록 저장</button>
+      </form>
+      <ul id="meetingList" class="item-list"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    initCommonUI('team');
+
+    function renderTeam() {
+      const data = loadData();
+      ['todo', 'doing', 'done'].forEach(st => {
+        const col = document.getElementById(`col-${st}`);
+        const items = data.teamTasks.filter(t => t.status === st);
+        col.innerHTML = items.map(t => `
+          <div class="kanban-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span class="badge">${t.member}</span>
+              <button class="btn btn-danger" onclick="deleteTeamTask('${t.id}')">×</button>
+            </div>
+            <p style="font-size:0.92rem; margin-bottom:10px;">${t.task}</p>
+            <div style="display:flex; gap:6px;">
+              ${st !== 'todo' ? `<button class="btn btn-outline btn-sm" onclick="moveTask('${t.id}', 'todo')">할 일</button>` : ''}
+              ${st !== 'doing' ? `<button class="btn btn-outline btn-sm" onclick="moveTask('${t.id}', 'doing')">진행중</button>` : ''}
+              ${st !== 'done' ? `<button class="btn btn-outline btn-sm" onclick="moveTask('${t.id}', 'done')">완료</button>` : ''}
+            </div>
+          </div>
+        `).join('');
+      });
+
+      const mList = document.getElementById('meetingList');
+      mList.innerHTML = data.meetings.map(m => `
+        <li class="list-item">
+          <div>
+            <span class="badge">${m.date}</span>
+            <strong>참석: ${m.members}</strong> — ${m.note}
+          </div>
+          <button class="btn btn-danger" onclick="deleteMeeting('${m.id}')">삭제</button>
+        </li>
+      `).join('');
+    }
+
+    document.getElementById('teamTaskForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      data.teamTasks.push({
+        id: 'k' + Date.now(),
+        member: document.getElementById('tMember').value.trim(),
+        task: document.getElementById('tDesc').value.trim(),
+        status: 'todo'
+      });
+      saveData(data);
+      e.target.reset();
+      renderTeam();
+    });
+
+    function moveTask(id, status) {
+      const data = loadData();
+      const item = data.teamTasks.find(t => t.id === id);
+      if (item) item.status = status;
+      saveData(data);
+      renderTeam();
+    }
+
+    function deleteTeamTask(id) {
+      const data = loadData();
+      data.teamTasks = data.teamTasks.filter(t => t.id !== id);
+      saveData(data);
+      renderTeam();
+    }
+
+    document.getElementById('meetingForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      data.meetings.unshift({
+        id: 'm' + Date.now(),
+        date: document.getElementById('mDate').value,
+        members: document.getElementById('mMembers').value.trim(),
+        note: document.getElementById('mNote').value.trim()
+      });
+      saveData(data);
+      e.target.reset();
+      renderTeam();
+    });
+
+    function deleteMeeting(id) {
+      const data = loadData();
+      data.meetings = data.meetings.filter(m => m.id !== id);
+      saveData(data);
+      renderTeam();
+    }
+
+    renderTeam();
+  </script>
+</body>
+</html>
