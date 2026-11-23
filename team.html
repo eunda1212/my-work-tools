@@ -40,7 +40,7 @@
         </div>
 
         <form id="inviteMemberForm" class="form-row" style="margin-bottom:12px;">
-          <input type="text" id="inviteUserId" placeholder="초대할 팀원의 계정 ID 입력 (예: student1)" required style="flex:1; max-width:300px;" />
+          <input type="text" id="inviteUserId" placeholder="초대할 팀원의 계정 ID 입력 (예: 20250890)" required style="flex:1; max-width:300px;" />
           <button type="submit" id="inviteBtn" class="btn">+ ID로 팀원 초대</button>
         </form>
 
@@ -103,11 +103,22 @@
     }
 
     async function initTeams() {
-      myTeams = await syncMyTeamsFromCloud();
+      // 1. 로컬에 저장된 팀 목록으로 먼저 화면 표시
+      myTeams = getMyTeams();
       if (myTeams.length > 0 && !selectedTeamId) {
         selectedTeamId = myTeams[0].id;
       }
       renderAllTeamUI();
+
+      // 2. 클라우드에서 최신 팀 목록 동기화
+      const cloudTeams = await syncMyTeamsFromCloud();
+      if (Array.isArray(cloudTeams) && (cloudTeams.length > 0 || myTeams.length === 0)) {
+        myTeams = cloudTeams;
+        if (myTeams.length > 0 && !getCurrentTeam()) {
+          selectedTeamId = myTeams[0].id;
+        }
+        renderAllTeamUI();
+      }
     }
 
     function getCurrentTeam() {
