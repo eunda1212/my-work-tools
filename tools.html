@@ -10,14 +10,59 @@
   <header id="main-header"></header>
 
   <main class="container">
-    <div class="page-header">
-      <h1>🛠️ 주간 강의 시간표 빌더 & 데이터 백업</h1>
-      <p>주간 강의 시간표를 구성하고, 개인 학습 데이터를 JSON 파일로 백업하거나 복원하세요.</p>
+    <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h1>🛠️ 학기별 주간 강의 시간표 & 교시 맞춤 설정</h1>
+        <p>학기를 나누어 시간표를 관리하고, 학교별 1교시 시작 시간·수업 길이·야간 교시(최대 15교시)를 자유롭게 조절하세요.</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label for="ttSemesterSelect" style="font-weight:700; font-size:0.92rem;">시간표 학기:</label>
+        <select id="ttSemesterSelect" onchange="onTtSemesterChange(this.value)" style="min-width:150px; font-weight:700;"></select>
+      </div>
     </div>
 
+    <!-- 학교별 교시 시간 & 야간 교시 커스텀 설정 바 -->
+    <section class="card" style="margin-bottom:20px;">
+      <div class="card-title">
+        <span>⚙️ 학교별 교시 시간 & 야간 수업 설정</span>
+        <span style="font-size:0.82rem; color:var(--text-sub); font-weight:500;">변경 즉시 시간표에 실제 시각이 자동 반영됩니다</span>
+      </div>
+      <div class="form-row" style="margin-bottom:0; align-items:center;">
+        <label style="font-size:0.86rem; font-weight:700;">1교시 시작:</label>
+        <select id="cfgStartHour" onchange="updateTimetableConfig()">
+          <option value="8">08시</option>
+          <option value="9">09시</option>
+          <option value="10">10시</option>
+        </select>
+        <select id="cfgStartMin" onchange="updateTimetableConfig()">
+          <option value="0">00분</option>
+          <option value="30">30분</option>
+        </select>
+
+        <label style="font-size:0.86rem; font-weight:700; margin-left:8px;">1교시 길이:</label>
+        <select id="cfgPeriodMin" onchange="updateTimetableConfig()">
+          <option value="50">50분 수업</option>
+          <option value="60">60분 (1시간)</option>
+          <option value="75">75분 수업</option>
+        </select>
+
+        <label style="font-size:0.86rem; font-weight:700; margin-left:8px;">표시 교시 수:</label>
+        <select id="cfgMaxPeriods" onchange="updateTimetableConfig()">
+          <option value="8">8교시까지 (주간)</option>
+          <option value="10">10교시까지 (오후/저녁)</option>
+          <option value="12">12교시까지 (야간 포함)</option>
+          <option value="15">15교시까지 (늦은 야간)</option>
+        </select>
+      </div>
+    </section>
+
     <div class="grid-2">
-      <section class="card">
-        <div class="card-title">🗓️ 주간 강의 시간표</div>
+      <section class="card" style="grid-column: span 2;">
+        <div class="card-title">
+          <span id="ttHeaderTitle">🗓️ 주간 강의 시간표</span>
+          <span style="font-size:0.8rem; color:var(--text-sub); font-weight:500;">칸을 클릭하면 해당 강의가 삭제됩니다</span>
+        </div>
+
         <form id="ttForm" class="form-row">
           <select id="ttDay">
             <option value="월">월요일</option>
@@ -25,60 +70,76 @@
             <option value="수">수요일</option>
             <option value="목">목요일</option>
             <option value="금">금요일</option>
+            <option value="토">토요일 (주말/야간)</option>
           </select>
-          <select id="ttPeriod">
-            <option value="1">1교시 (09:00)</option>
-            <option value="2">2교시 (10:00)</option>
-            <option value="3">3교시 (11:00)</option>
-            <option value="4">4교시 (13:00)</option>
-            <option value="5">5교시 (14:00)</option>
-            <option value="6">6교시 (15:00)</option>
-          </select>
+          <select id="ttPeriodStart"></select>
+          <span style="align-self:center; font-weight:700;">~</span>
+          <select id="ttPeriodEnd"></select>
           <select id="ttSubject"></select>
-          <input type="text" id="ttRoom" placeholder="강의실 (예: 공학관 302)" style="flex:1;" />
-          <button type="submit" class="btn">추가</button>
+          <input type="text" id="ttRoom" placeholder="강의실 (예: 공학관 302)" style="flex:1; min-width:140px;" />
+          <button type="submit" class="btn">시간표 추가</button>
         </form>
 
         <div style="overflow-x:auto;">
           <table class="timetable" id="timetableGrid"></table>
         </div>
       </section>
-
-      <section class="card">
-        <div class="card-title">☁️ 계정 데이터 동기화 및 로컬 백업</div>
-        <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
-          로그인된 계정의 모든 학습 기록과 팀플 폴더는 자동으로 클라우드 서버와 동기화됩니다. 필요 시 JSON 파일로 별도 백업할 수 있습니다.
-        </p>
-
-        <div class="form-row" style="margin-bottom:18px;">
-          <button class="btn" onclick="pushNowToCloud()">⬆️ 서버에 수동 백업</button>
-          <button class="btn btn-outline" onclick="pullFromCloud()">⬇️ 서버에서 불러오기</button>
-        </div>
-
-        <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;" />
-
-        <div class="card-title" style="font-size:0.98rem;">📁 로컬 JSON 파일 백업 / 복원</div>
-        <div class="form-row">
-          <button class="btn btn-outline btn-sm" onclick="exportJSON()">⬇️ JSON 다운로드</button>
-          <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" style="font-size:0.82rem;" />
-          <button class="btn btn-danger btn-sm" onclick="resetAllData()">초기화</button>
-        </div>
-      </section>
     </div>
+
+    <section class="card">
+      <div class="card-title">☁️ 계정 데이터 동기화 및 로컬 백업</div>
+      <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
+        로그인된 계정의 모든 학습 기록, 학기별 성적·시간표, 팀플 폴더는 자동으로 클라우드 서버와 동기화됩니다.
+      </p>
+      <div class="form-row" style="margin-bottom:0;">
+        <button class="btn" onclick="pushNowToCloud()">⬆️ 서버에 수동 백업</button>
+        <button class="btn btn-outline" onclick="pullFromCloud()">⬇️ 서버에서 불러오기</button>
+        <button class="btn btn-outline" onclick="exportJSON()">⬇️ JSON 파일 백업</button>
+        <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" style="font-size:0.82rem;" />
+        <button class="btn btn-danger" onclick="resetAllData()">초기화</button>
+      </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
   <script>
     initCommonUI('tools');
 
-    function pushNowToCloud() {
-      const session = getSession();
-      if (!session || session.userId === 'guest') {
-        alert('체험 계정은 서버 백업을 지원하지 않습니다. 회원가입 후 이용해 주세요.');
-        return;
-      }
-      saveData(loadData());
-      alert('서버로 현재 계정 데이터를 안전하게 백업했습니다!');
+    function initTtPage() {
+      const data = loadData();
+      const semSel = document.getElementById('ttSemesterSelect');
+      semSel.innerHTML = SEMESTERS.map(s => `<option value="${s}">${s}</option>`).join('');
+      semSel.value = data.selectedSemester || '1학년 1학기';
+
+      const cfg = data.timetableConfig;
+      document.getElementById('cfgStartHour').value = cfg.startHour;
+      document.getElementById('cfgStartMin').value = cfg.startMin;
+      document.getElementById('cfgPeriodMin').value = cfg.periodMinutes;
+      document.getElementById('cfgMaxPeriods').value = cfg.maxPeriods;
+
+      populateSubjects();
+      populatePeriodSelects();
+      renderTimetable();
+    }
+
+    function onTtSemesterChange(val) {
+      const data = loadData();
+      data.selectedSemester = val;
+      saveData(data);
+      renderTimetable();
+    }
+
+    function updateTimetableConfig() {
+      const data = loadData();
+      data.timetableConfig = {
+        startHour: Number(document.getElementById('cfgStartHour').value),
+        startMin: Number(document.getElementById('cfgStartMin').value),
+        periodMinutes: Number(document.getElementById('cfgPeriodMin').value),
+        maxPeriods: Number(document.getElementById('cfgMaxPeriods').value)
+      };
+      saveData(data);
+      populatePeriodSelects();
+      renderTimetable();
     }
 
     function populateSubjects() {
@@ -87,15 +148,52 @@
       sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="강의">강의</option>';
     }
 
+    function populatePeriodSelects() {
+      const data = loadData();
+      const cfg = data.timetableConfig;
+      const startSel = document.getElementById('ttPeriodStart');
+      const endSel = document.getElementById('ttPeriodEnd');
+
+      let opts = '';
+      for (let p = 1; p <= cfg.maxPeriods; p++) {
+        const timeRange = formatPeriodTime(p, cfg);
+        const nightTag = p >= 9 ? ' [야간]' : '';
+        opts += `<option value="${p}">${p}교시 (${timeRange})${nightTag}</option>`;
+      }
+      startSel.innerHTML = opts;
+      endSel.innerHTML = opts;
+    }
+
+    // 시작 교시 변경 시 종료 교시도 자동으로 최소 시작 교시 이상으로 맞춤
+    document.getElementById('ttPeriodStart').addEventListener('change', (e) => {
+      const s = Number(e.target.value);
+      const endSel = document.getElementById('ttPeriodEnd');
+      if (Number(endSel.value) < s) {
+        endSel.value = s;
+      }
+    });
+
     function renderTimetable() {
       const data = loadData();
-      const days = ['월', '화', '수', '목', '금'];
-      let html = `<thead><tr><th>교시</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+      const currentSem = document.getElementById('ttSemesterSelect').value;
+      const cfg = data.timetableConfig;
+      document.getElementById('ttHeaderTitle').textContent = `🗓️ [${currentSem}] 주간 강의 시간표`;
 
-      for (let p = 1; p <= 6; p++) {
-        html += `<tr><td><strong>${p}교시</strong></td>`;
+      const days = ['월', '화', '수', '목', '금', '토'];
+      let html = `<thead><tr><th style="min-width:110px;">교시 / 시간</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+
+      const semEntries = data.timetable.filter(item => item.semester === currentSem);
+
+      for (let p = 1; p <= cfg.maxPeriods; p++) {
+        const timeRange = formatPeriodTime(p, cfg);
+        const nightBadge = p >= 9 ? ' <span style="font-size:0.7rem; color:var(--accent-coral);">야간</span>' : '';
+        html += `<tr>
+          <td>
+            <strong>${p}교시</strong>${nightBadge}<br>
+            <span style="font-size:0.74rem; color:var(--text-sub);">${timeRange}</span>
+          </td>`;
         days.forEach(d => {
-          const entry = data.timetable.find(item => item.day === d && Number(item.period) === p);
+          const entry = semEntries.find(item => item.day === d && Number(item.period) === p);
           if (entry) {
             html += `<td class="tt-filled" style="cursor:pointer;" title="클릭 시 삭제" onclick="removeTimetable('${d}', ${p})">
               ${entry.subject}<br><span style="font-size:0.75rem; font-weight:400;">${entry.room || ''}</span>
@@ -113,13 +211,21 @@
     document.getElementById('ttForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const data = loadData();
+      const currentSem = document.getElementById('ttSemesterSelect').value;
       const day = document.getElementById('ttDay').value;
-      const period = Number(document.getElementById('ttPeriod').value);
+      const pStart = Number(document.getElementById('ttPeriodStart').value);
+      const pEnd = Number(document.getElementById('ttPeriodEnd').value);
       const subject = document.getElementById('ttSubject').value;
       const room = document.getElementById('ttRoom').value.trim();
 
-      data.timetable = data.timetable.filter(item => !(item.day === day && Number(item.period) === period));
-      data.timetable.push({ day, period, subject, room });
+      const from = Math.min(pStart, pEnd);
+      const to = Math.max(pStart, pEnd);
+
+      for (let p = from; p <= to; p++) {
+        data.timetable = data.timetable.filter(item => !(item.semester === currentSem && item.day === day && Number(item.period) === p));
+        data.timetable.push({ semester: currentSem, day, period: p, subject, room });
+      }
+
       saveData(data);
       document.getElementById('ttRoom').value = '';
       renderTimetable();
@@ -127,9 +233,20 @@
 
     function removeTimetable(day, period) {
       const data = loadData();
-      data.timetable = data.timetable.filter(item => !(item.day === day && Number(item.period) === period));
+      const currentSem = document.getElementById('ttSemesterSelect').value;
+      data.timetable = data.timetable.filter(item => !(item.semester === currentSem && item.day === day && Number(item.period) === period));
       saveData(data);
       renderTimetable();
+    }
+
+    function pushNowToCloud() {
+      const session = getSession();
+      if (!session || session.userId === 'guest') {
+        alert('체험 계정은 서버 백업을 지원하지 않습니다. 회원가입 후 이용해 주세요.');
+        return;
+      }
+      saveData(loadData());
+      alert('서버로 현재 계정 데이터를 안전하게 백업했습니다!');
     }
 
     function exportJSON() {
@@ -168,8 +285,7 @@
       }
     }
 
-    populateSubjects();
-    renderTimetable();
+    initTtPage();
   </script>
 </body>
 </html>

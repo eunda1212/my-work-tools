@@ -7,10 +7,19 @@ const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 // ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
 const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
 // ★ 관리자 모드 진입 PIN 번호 (원하는 비밀번호로 변경 가능)
-const ADMIN_PIN = '11292612';
+const ADMIN_PIN = 'admin1234';
+
+const SEMESTERS = [
+  '1학년 1학기', '1학년 2학기',
+  '2학년 1학기', '2학년 2학기',
+  '3학년 1학기', '3학년 2학기',
+  '4학년 1학기', '4학년 2학기',
+  '계절학기'
+];
 
 const defaultData = {
   darkMode: false,
+  selectedSemester: '1학년 1학기',
   subjects: [
     { id: 's1', name: '웹프로그래밍', prof: '김교수', credit: 3, type: '전공' },
     { id: 's2', name: '컴퓨터개론', prof: '이교수', credit: 3, type: '전공' },
@@ -25,16 +34,23 @@ const defaultData = {
     { subject: '컴퓨터개론', minutes: 45 }
   ],
   grades: [
-    { subject: '웹프로그래밍', credit: 3, type: '전공', grade: 'A+' },
-    { subject: '컴퓨터개론', credit: 3, type: '전공', grade: 'A0' },
-    { subject: '대학영어', credit: 2, type: '교양', grade: 'B+' }
+    { semester: '1학년 1학기', subject: '웹프로그래밍', credit: 3, type: '전공', grade: 'A+' },
+    { semester: '1학년 1학기', subject: '컴퓨터개론', credit: 3, type: '전공', grade: 'A0' },
+    { semester: '1학년 1학기', subject: '대학영어', credit: 2, type: '교양', grade: 'B+' },
+    { semester: '1학년 1학기', subject: '채플/인성세미나', credit: 1, type: '교양', grade: 'P' }
   ],
   targetGpa: 4.0,
-  gradGoal: { total: 130, major: 65, liberal: 35, prevEarned: 60, prevMajor: 30, prevLiberal: 20 },
+  gradGoal: { total: 130, major: 65, liberal: 35, prevEarned: 0, prevMajor: 0, prevLiberal: 0 },
+  timetableConfig: {
+    startHour: 9,
+    startMin: 0,
+    periodMinutes: 60,
+    maxPeriods: 12 // 야간 수업(12교시, 밤 9시)까지 기본 지원 및 자유 변경 가능
+  },
   timetable: [
-    { day: '월', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
-    { day: '수', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
-    { day: '화', period: 4, subject: '컴퓨터개론', room: '정보관 105' }
+    { semester: '1학년 1학기', day: '월', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
+    { semester: '1학년 1학기', day: '수', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
+    { semester: '1학년 1학기', day: '화', period: 4, subject: '컴퓨터개론', room: '정보관 105' }
   ]
 };
 
@@ -77,7 +93,6 @@ function triggerAdminMode() {
   location.reload();
 }
 
-// 단축키(Ctrl + Shift + A)로도 언제든 관리자 모드 호출 가능
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
@@ -136,7 +151,13 @@ function loadData() {
     return clone;
   }
   try {
-    return { ...defaultData, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    const merged = { ...defaultData, ...parsed };
+    merged.timetableConfig = { ...defaultData.timetableConfig, ...(parsed.timetableConfig || {}) };
+    // 기존 데이터 하위 호환: semester 필드가 없으면 기본 학기로 보정
+    merged.grades = (merged.grades || []).map(g => ({ semester: merged.selectedSemester || '1학년 1학기', ...g }));
+    merged.timetable = (merged.timetable || []).map(t => ({ semester: merged.selectedSemester || '1학년 1학기', ...t }));
+    return merged;
   } catch (e) {
     return JSON.parse(JSON.stringify(defaultData));
   }
@@ -224,7 +245,6 @@ function setAllLocalTeams(teams) {
   localStorage.setItem(SHARED_TEAMS_KEY, JSON.stringify(teams));
 }
 
-// 현재 로그인한 사용자가 속한 팀 폴더 목록 반환
 function getMyTeams() {
   const session = getSession();
   if (!session) return [];
@@ -236,7 +256,6 @@ function getMyTeams() {
   return all.filter(team => (team.members || []).some(m => m.userId === session.userId));
 }
 
-// 특정 팀 저장 (로컬 공용 저장소 + 구글 시트 CampusMateTeams 동시 반영)
 async function saveTeamProject(teamObj) {
   const session = getSession();
   let all = getAllLocalTeams();
@@ -287,7 +306,6 @@ async function deleteTeamProject(teamId) {
   }
 }
 
-// 구글 시트에서 내가 초대된 팀 목록 최신화
 async function syncMyTeamsFromCloud() {
   const session = getSession();
   const gasUrl = getGasUrl();
@@ -298,7 +316,6 @@ async function syncMyTeamsFromCloud() {
     const json = await res.json();
     if (json.status === 'ok' && Array.isArray(json.teams)) {
       let all = getAllLocalTeams();
-      // 서버에서 받아온 내 팀 목록으로 병합 갱신
       const serverIds = new Set(json.teams.map(t => t.id));
       all = all.filter(t => !serverIds.has(t.id)).concat(json.teams);
       setAllLocalTeams(all);
@@ -308,7 +325,6 @@ async function syncMyTeamsFromCloud() {
   return getMyTeams();
 }
 
-// 계정 ID로 사용자 검색 (팀원 초대용)
 async function lookupUserById(targetId) {
   const cleanId = targetId.trim();
   if (!cleanId) return null;
@@ -424,6 +440,7 @@ function initCommonUI(activePage) {
   }
 }
 
+// 패논패(P / NP) 지원 학점 계산 (P/NP는 평점 분모·분자에서 제외, P만 졸업 학점에 합산)
 const gradePointMap = {
   'A+': 4.5, 'A0': 4.0, 'B+': 3.5, 'B0': 3.0,
   'C+': 2.5, 'C0': 2.0, 'D+': 1.5, 'D0': 1.0, 'F': 0.0
@@ -433,10 +450,22 @@ function calculateGPA(grades) {
   let totalCredits = 0;
   let totalPoints = 0;
   grades.forEach(g => {
+    if (g.grade === 'P' || g.grade === 'NP') return; // 패논패 과목은 평점 계산에서 제외
     const cr = Number(g.credit) || 0;
     const pt = gradePointMap[g.grade] ?? 0;
     totalCredits += cr;
     totalPoints += cr * pt;
   });
   return totalCredits === 0 ? 0 : (totalPoints / totalCredits);
+}
+
+// 교시별 실제 시각 문자열 계산 함수 (예: 1교시 (09:00~10:00))
+function formatPeriodTime(periodNum, cfg) {
+  const startTotalMin = (Number(cfg.startHour) * 60) + Number(cfg.startMin) + (periodNum - 1) * Number(cfg.periodMinutes);
+  const endTotalMin = startTotalMin + Number(cfg.periodMinutes);
+  const sh = String(Math.floor(startTotalMin / 60)).padStart(2, '0');
+  const sm = String(startTotalMin % 60).padStart(2, '0');
+  const eh = String(Math.floor(endTotalMin / 60)).padStart(2, '0');
+  const em = String(endTotalMin % 60).padStart(2, '0');
+  return `${sh}:${sm}~${eh}:${em}`;
 }
