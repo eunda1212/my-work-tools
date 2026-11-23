@@ -1,9 +1,10 @@
-// CAMPUS MATE 통합 데이터 및 Google Apps Script 온라인 동기화 관리
-const STORAGE_KEY = 'campus_mate_data_v2';
+// CAMPUS MATE 인증(ID/PW) 및 Google Apps Script 온라인 DB 관리 엔진
+const SESSION_KEY = 'campus_mate_session';
+const USERS_LOCAL_KEY = 'campus_mate_local_users';
 const GAS_CONFIG_KEY = 'campus_mate_gas_config';
 
-// ★ 구글 앱스 스크립트 배포 후 발급받은 웹 앱 URL을 아래 따옴표 안에 넣으면 모든 기기에서 기본으로 연결됩니다!
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwz2-ac7qRFPjLPnLXcrBi1SmKLD9QF838AuhBV3OyZtnkCXn7TSdauua0ZKFCIVy78QA/exec';
+// 구글 앱스 스크립트 배포 후 발급받은 웹 앱 URL을 아래 따옴표 안에 넣으면 모든 기기에서 기본으로 연결됨
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzJ23bWjBf4qMg10xknmzK1dHFRe-T6JrgwlYqXhLPS5zUf4MKTDqP0uyP7jHaaxhSlzg/exec';
 
 const defaultData = {
   darkMode: false,
@@ -28,12 +29,12 @@ const defaultData = {
   targetGpa: 4.0,
   gradGoal: { total: 130, major: 65, liberal: 35, prevEarned: 60, prevMajor: 30, prevLiberal: 20 },
   teamTasks: [
-    { id: 'k1', member: '이다은', task: '메인 UI 및 스토리보드 설계', status: 'done' },
-    { id: 'k2', member: '김민수', task: '캘린더 및 타이머 JS 구현', status: 'doing' },
-    { id: 'k3', member: '박지훈', task: '최종 발표 PPT 제작', status: 'todo' }
+    { id: 'k1', member: '팀장', task: '메인 UI 및 스토리보드 설계', status: 'done' },
+    { id: 'k2', member: '팀원A', task: '캘린더 및 타이머 JS 구현', status: 'doing' },
+    { id: 'k3', member: '팀원B', task: '최종 발표 PPT 제작', status: 'todo' }
   ],
   meetings: [
-    { id: 'm1', date: '2026-11-20', members: '이다은, 김민수, 박지훈', note: '주제를 CAMPUS MATE로 확정하고 6개 페이지 역할 분담 완료.' }
+    { id: 'm1', date: '2026-11-20', members: '팀장, 팀원A, 팀원B', note: '주제를 CAMPUS MATE로 확정하고 6개 페이지 역할 분담 완료.' }
   ],
   timetable: [
     { day: '월', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
@@ -42,24 +43,67 @@ const defaultData = {
   ]
 };
 
-function getGasConfig() {
-  const raw = localStorage.getItem(GAS_CONFIG_KEY);
-  const saved = raw ? JSON.parse(raw) : {};
-  return {
-    url: saved.url || DEFAULT_GAS_URL,
-    userId: saved.userId || '20250890'
-  };
+function getGasUrl() {
+  const saved = localStorage.getItem(GAS_CONFIG_KEY);
+  return (saved && saved.trim()) ? saved.trim() : DEFAULT_GAS_URL;
 }
 
-function saveGasConfig(url, userId) {
-  localStorage.setItem(GAS_CONFIG_KEY, JSON.stringify({ url: url.trim(), userId: userId.trim() || '20250890' }));
+function setGasUrl(url) {
+  localStorage.setItem(GAS_CONFIG_KEY, url.trim());
+}
+
+function getSession() {
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function setSession(userObj, remember = true) {
+  const str = JSON.stringify(userObj);
+  sessionStorage.setItem(SESSION_KEY, str);
+  if (remember) localStorage.setItem(SESSION_KEY, str);
+}
+
+function logoutUser() {
+  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
+  location.href = 'login.html';
+}
+
+function requireAuth() {
+  const session = getSession();
+  if (!session || !session.userId) {
+    location.href = 'login.html';
+    return null;
+  }
+  return session;
+}
+
+function getUserStorageKey(userId) {
+  return `campus_mate_user_data_${userId}`;
+}
+
+function getLocalUsers() {
+  const raw = localStorage.getItem(USERS_LOCAL_KEY);
+  if (!raw) {
+    // 범용 체험 계정 세팅
+    const initial = {
+      'guest': { password: '1234', userName: '체험사용자' }
+    };
+    localStorage.setItem(USERS_LOCAL_KEY, JSON.stringify(initial));
+    return initial;
+  }
+  return JSON.parse(raw);
 }
 
 function loadData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const session = getSession();
+  const uid = session ? session.userId : 'guest';
+  const key = getUserStorageKey(uid);
+  const raw = localStorage.getItem(key);
   if (!raw) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
-    return JSON.parse(JSON.stringify(defaultData));
+    const clone = JSON.parse(JSON.stringify(defaultData));
+    localStorage.setItem(key, JSON.stringify(clone));
+    return clone;
   }
   try {
     return { ...defaultData, ...JSON.parse(raw) };
@@ -73,46 +117,51 @@ function setSyncStatus(msg) {
   if (el) el.textContent = msg;
 }
 
-// 로컬 저장 + 구글 앱스 스크립트(구글 시트) 온라인 비동기 동기화
 function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  const cfg = getGasConfig();
-  if (cfg.url) {
-    setSyncStatus('☁️ 구글 시트 동기화 중...');
-    fetch(cfg.url, {
+  const session = getSession();
+  if (!session) return;
+  const uid = session.userId;
+  localStorage.setItem(getUserStorageKey(uid), JSON.stringify(data));
+
+  const gasUrl = getGasUrl();
+  if (gasUrl) {
+    setSyncStatus('☁️ 구글 시트 온라인 저장 중...');
+    fetch(gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ userId: cfg.userId, data: data })
+      body: JSON.stringify({
+        action: 'save',
+        userId: uid,
+        data: data
+      })
     })
       .then(res => res.json())
-      .then(() => setSyncStatus(`✅ 구글 시트 온라인 저장 완료 (ID: ${cfg.userId})`))
-      .catch(() => setSyncStatus('⚠️ 온라인 동기화 실패 (로컬 저장됨)'));
+      .then(() => setSyncStatus(`✅ 온라인 DB 동기화 완료 (${session.userName}님)`))
+      .catch(() => setSyncStatus('⚠️ 온라인 동기화 실패 (브라우저 로컬 저장됨)'));
   }
 }
 
-// 구글 시트에서 온라인 데이터 불러오기
-async function pullFromCloud(onComplete) {
-  const cfg = getGasConfig();
-  if (!cfg.url) {
-    alert('먼저 [시간표·백업] 페이지에서 Google Apps Script 웹 앱 URL을 등록해 주세요.');
+async function pullFromCloud() {
+  const session = getSession();
+  const gasUrl = getGasUrl();
+  if (!session) return;
+  if (!gasUrl) {
+    alert('먼저 [시간표·백업] 페이지에서 Google Apps Script 웹 앱 URL을 연결해 주세요.');
     return;
   }
-  setSyncStatus('☁️ 구글 시트에서 데이터 불러오는 중...');
+  setSyncStatus('☁️ 구글 시트에서 최신 데이터 불러오는 중...');
   try {
-    const res = await fetch(`${cfg.url}?userId=${encodeURIComponent(cfg.userId)}`);
+    const res = await fetch(`${gasUrl}?action=fetch&userId=${encodeURIComponent(session.userId)}`);
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(json.data));
-      setSyncStatus(`✅ 클라우드 데이터 불러오기 완료 (ID: ${cfg.userId})`);
-      if (onComplete) onComplete();
-      else location.reload();
+      localStorage.setItem(getUserStorageKey(session.userId), JSON.stringify(json.data));
+      setSyncStatus('✅ 클라우드 데이터 동기화 완료');
+      location.reload();
     } else {
-      setSyncStatus(`ℹ️ 구글 시트에 저장된 [${cfg.userId}] 데이터가 아직 없습니다.`);
-      alert(`해당 ID(${cfg.userId})로 저장된 클라우드 데이터가 없습니다. 데이터를 수정하면 자동으로 생성됩니다.`);
+      alert('서버에 저장된 데이터가 아직 없습니다. 데이터를 변경하면 자동으로 저장됩니다.');
     }
   } catch (err) {
-    setSyncStatus('⚠️ 클라우드 불러오기 오류');
-    alert('구글 앱스 스크립트 연결에 실패했습니다. 웹 앱 URL과 액세스 권한(모든 사용자)을 확인해 주세요.');
+    alert('구글 시트 동기화 중 오류가 발생했습니다.');
   }
 }
 
@@ -128,13 +177,16 @@ function calcDDay(dateStr) {
 }
 
 function initCommonUI(activePage) {
+  const session = requireAuth();
+  if (!session) return;
+
   const data = loadData();
-  const cfg = getGasConfig();
+  const gasUrl = getGasUrl();
   if (data.darkMode) document.body.classList.add('dark-mode');
 
-  const statusInitial = cfg.url
-    ? `☁️ 온라인 DB 연결됨 (사용자 ID: ${cfg.userId})`
-    : `💻 로컬 저장 모드 (구글 시트 연동은 [시간표·백업]에서 설정)`;
+  const statusInitial = gasUrl
+    ? `☁️ 구글 시트 온라인 DB 연결됨 · 로그인 계정: ${session.userName} (${session.userId})`
+    : `💻 브라우저 로컬 계정 모드 · 로그인 계정: ${session.userName} (${session.userId})`;
 
   const headerHTML = `
     <div class="nav-container">
@@ -149,15 +201,14 @@ function initCommonUI(activePage) {
       </nav>
       <div class="nav-actions">
         <button id="darkModeBtn" class="btn btn-outline btn-sm">${data.darkMode ? '☀️ 라이트' : '🌙 다크'}</button>
+        <button onclick="logoutUser()" class="btn btn-danger btn-sm">로그아웃</button>
       </div>
     </div>
     <div class="sync-bar">
       <div class="sync-inner">
         <span id="syncStatusText">${statusInitial}</span>
-        <div style="display:flex; gap:6px; align-items:center;">
-          <input type="text" id="quickUserIdInput" value="${cfg.userId}" placeholder="학번/닉네임" style="padding:3px 8px; font-size:0.8rem; width:110px;" />
-          <button class="btn btn-outline btn-sm" style="padding:3px 8px;" onclick="changeQuickUserId()">ID 변경</button>
-          <button class="btn btn-sm" style="padding:3px 9px;" onclick="pullFromCloud()">☁️ 클라우드 동기화</button>
+        <div>
+          <button class="btn btn-sm" style="padding:3px 10px;" onclick="pullFromCloud()">☁️ 클라우드 새로고침</button>
         </div>
       </div>
     </div>
@@ -173,18 +224,6 @@ function initCommonUI(activePage) {
       document.body.classList.toggle('dark-mode');
       document.getElementById('darkModeBtn').textContent = current.darkMode ? '☀️ 라이트' : '🌙 다크';
     });
-  }
-}
-
-function changeQuickUserId() {
-  const newId = document.getElementById('quickUserIdInput').value.trim();
-  if (!newId) return;
-  const cfg = getGasConfig();
-  saveGasConfig(cfg.url, newId);
-  if (cfg.url) {
-    pullFromCloud();
-  } else {
-    setSyncStatus(`💻 사용자 ID 변경됨: ${newId} (구글 시트 URL 연결 시 온라인 동기화 가능)`);
   }
 }
 

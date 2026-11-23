@@ -40,6 +40,82 @@ body {
   line-height: 1.5;
 }
 
+/* Login Page Layout */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--primary-soft) 0%, var(--bg-color) 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  padding: 34px 30px;
+  box-shadow: 0 12px 32px rgba(124, 131, 253, 0.14);
+}
+
+.login-logo {
+  text-align: center;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 24px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background-color: var(--bg-color);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.auth-tab {
+  padding: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  font-weight: 700;
+  font-size: 0.92rem;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  background-color: var(--card-bg);
+  color: var(--primary);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Header & Navigation */
 header {
   background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
@@ -94,7 +170,7 @@ header {
 
 .nav-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -196,12 +272,12 @@ header {
 }
 
 input, select, textarea {
-  padding: 9px 13px;
+  padding: 10px 13px;
   border: 1px solid var(--border-color);
   border-radius: 10px;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   outline: none;
 }
 
@@ -210,11 +286,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .btn {
-  padding: 9px 15px;
+  padding: 10px 16px;
   border: none;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
   background-color: var(--primary);

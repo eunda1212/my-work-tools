@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>로그인 - CAMPUS MATE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">🎓 CAMPUS MATE</div>
+      <p class="login-sub">대학생을 위한 통합 학업 관리 대시보드</p>
+
+      <!-- 로그인 / 회원가입 탭 -->
+      <div class="auth-tabs">
+        <button type="button" id="tabLogin" class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
+        <button type="button" id="tabRegister" class="auth-tab" onclick="switchAuthTab('register')">회원가입</button>
+      </div>
+
+      <!-- 로그인 폼 -->
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="loginId">아이디 (학번)</label>
+          <input type="text" id="loginId" placeholder="예: guest 또는 학번 입력" required />
+        </div>
+        <div class="input-group">
+          <label for="loginPw">비밀번호</label>
+          <input type="password" id="loginPw" placeholder="비밀번호를 입력하세요" required />
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; font-size:0.84rem; color:var(--text-sub);">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="rememberMe" checked /> 로그인 상태 유지
+          </label>
+          <span>체험 계정: guest / 1234</span>
+        </div>
+        <button type="submit" id="loginSubmitBtn" class="btn" style="width:100%; padding:12px; font-size:1rem;">
+          로그인하기
+        </button>
+      </form>
+
+      <!-- 회원가입 폼 -->
+      <form id="registerForm" style="display:none;">
+        <div class="input-group">
+          <label for="regName">이름 (닉네임)</label>
+          <input type="text" id="regName" placeholder="예: 홍길동" required />
+        </div>
+        <div class="input-group">
+          <label for="regId">사용할 아이디 (학번)</label>
+          <input type="text" id="regId" placeholder="예: 20260001" required />
+        </div>
+        <div class="input-group">
+          <label for="regPw">비밀번호</label>
+          <input type="password" id="regPw" placeholder="비밀번호 설정" required />
+        </div>
+        <div class="input-group">
+          <label for="regPwConfirm">비밀번호 확인</label>
+          <input type="password" id="regPwConfirm" placeholder="비밀번호 재입력" required />
+        </div>
+        <button type="submit" id="regSubmitBtn" class="btn" style="width:100%; padding:12px; font-size:1rem;">
+          회원가입 완료 및 시작하기
+        </button>
+      </form>
+
+      <!-- 구글 시트 서버 URL 설정 토글 -->
+      <div style="margin-top:20px; padding-top:14px; border-top:1px solid var(--border-color); text-align:center;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="toggleServerBox()">
+          ☁️ 구글 시트 서버 URL 연결 설정
+        </button>
+        <div id="serverConfigBox" style="display:none; margin-top:10px; text-align:left;">
+          <input type="url" id="loginGasUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; margin-bottom:6px; font-size:0.82rem;" />
+          <button type="button" class="btn btn-sm" style="width:100%;" onclick="saveLoginGasUrl()">서버 URL 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if (getSession()) {
+      location.href = 'index.html';
+    }
+
+    document.getElementById('loginGasUrl').value = getGasUrl();
+
+    function toggleServerBox() {
+      const box = document.getElementById('serverConfigBox');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function saveLoginGasUrl() {
+      const url = document.getElementById('loginGasUrl').value;
+      setGasUrl(url);
+      alert('Google Apps Script 서버 주소가 저장되었습니다.');
+    }
+
+    function switchAuthTab(mode) {
+      document.getElementById('loginForm').style.display = mode === 'login' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = mode === 'register' ? 'block' : 'none';
+      document.getElementById('tabLogin').className = mode === 'login' ? 'auth-tab active' : 'auth-tab';
+      document.getElementById('tabRegister').className = mode === 'register' ? 'auth-tab active' : 'auth-tab';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('loginId').value.trim();
+      const password = document.getElementById('loginPw').value.trim();
+      const remember = document.getElementById('rememberMe').checked;
+      const btn = document.getElementById('loginSubmitBtn');
+      const gasUrl = getGasUrl();
+
+      if (gasUrl) {
+        btn.disabled = true;
+        btn.textContent = '구글 시트 계정 확인 중...';
+        try {
+          const res = await fetch(`${gasUrl}?action=login&userId=${encodeURIComponent(userId)}&password=${encodeURIComponent(password)}`);
+          const json = await res.json();
+          if (json.status === 'ok') {
+            setSession({ userId: json.userId, userName: json.userName || userId }, remember);
+            if (json.data) {
+              localStorage.setItem(getUserStorageKey(userId), JSON.stringify(json.data));
+            }
+            location.href = 'index.html';
+            return;
+          } else {
+            alert(json.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+            btn.disabled = false;
+            btn.textContent = '로그인하기';
+            return;
+          }
+        } catch (err) {
+          alert('서버 연결에 실패했습니다. URL 설정을 확인해 주세요.');
+          btn.disabled = false;
+          btn.textContent = '로그인하기';
+          return;
+        }
+      }
+
+      const users = getLocalUsers();
+      if (users[userId] && users[userId].password === password) {
+        setSession({ userId, userName: users[userId].userName }, remember);
+        location.href = 'index.html';
+      } else {
+        alert('아이디 또는 비밀번호가 일치하지 않습니다. (체험 계정: guest / 1234 또는 회원가입 이용)');
+      }
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userName = document.getElementById('regName').value.trim();
+      const userId = document.getElementById('regId').value.trim();
+      const password = document.getElementById('regPw').value.trim();
+      const pwConfirm = document.getElementById('regPwConfirm').value.trim();
+      const btn = document.getElementById('regSubmitBtn');
+
+      if (password !== pwConfirm) {
+        alert('비밀번호 확인이 일치하지 않습니다.');
+        return;
+      }
+
+      const initialData = JSON.parse(JSON.stringify(defaultData));
+      const gasUrl = getGasUrl();
+
+      if (gasUrl) {
+        btn.disabled = true;
+        btn.textContent = '구글 시트에 계정 생성 중...';
+        try {
+          const res = await fetch(gasUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'register',
+              userId,
+              password,
+              userName,
+              data: initialData
+            })
+          });
+          const json = await res.json();
+          if (json.status === 'registered') {
+            setSession({ userId, userName }, true);
+            localStorage.setItem(getUserStorageKey(userId), JSON.stringify(initialData));
+            alert(`${userName}님, 회원가입이 완료되었습니다!`);
+            location.href = 'index.html';
+          } else {
+            alert(json.message || '이미 존재하는 아이디입니다.');
+            btn.disabled = false;
+            btn.textContent = '회원가입 완료 및 시작하기';
+          }
+          return;
+        } catch (err) {
+          alert('서버 통신 중 오류가 발생했습니다.');
+          btn.disabled = false;
+          btn.textContent = '회원가입 완료 및 시작하기';
+          return;
+        }
+      }
+
+      const users = getLocalUsers();
+      if (users[userId]) {
+        alert('이미 등록된 아이디입니다.');
+        return;
+      }
+      users[userId] = { password, userName };
+      localStorage.setItem(USERS_LOCAL_KEY, JSON.stringify(users));
+      localStorage.setItem(getUserStorageKey(userId), JSON.stringify(initialData));
+      setSession({ userId, userName }, true);
+      alert(`${userName}님, 환영합니다!`);
+      location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

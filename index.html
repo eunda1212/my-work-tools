@@ -11,8 +11,8 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>환영합니다! 오늘의 학업 현황을 한눈에 확인하세요 👋</h1>
-      <p>카드를 클릭하면 각 상세 페이지로 이동합니다. 수강 과목을 등록하면 모든 페이지 및 구글 시트에 자동 연동됩니다.</p>
+      <h1 id="welcomeTitle">환영합니다! 오늘의 학업 현황을 한눈에 확인하세요 👋</h1>
+      <p>카드를 클릭하면 각 상세 페이지로 이동합니다. 수강 과목을 등록하면 모든 페이지 및 계정에 자동 저장됩니다.</p>
     </div>
 
     <div class="grid-4">
@@ -76,6 +76,11 @@
     initCommonUI('index');
 
     function renderDashboard() {
+      const session = getSession();
+      if (session) {
+        document.getElementById('welcomeTitle').textContent = `${session.userName}님 환영합니다! 오늘의 학업 현황입니다 👋`;
+      }
+
       const data = loadData();
       const pendingTasks = data.tasks.filter(t => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due));
       document.getElementById('dash-task-count').textContent = `${pendingTasks.length}건`;
