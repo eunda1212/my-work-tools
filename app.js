@@ -5,7 +5,7 @@ const SHARED_TEAMS_KEY = 'campus_mate_shared_teams';
 const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 
 // ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzJ23bWjBf4qMg10xknmzK1dHFRe-T6JrgwlYqXhLPS5zUf4MKTDqP0uyP7jHaaxhSlzg/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwz2-ac7qRFPjLPnLXcrBi1SmKLD9QF838AuhBV3OyZtnkCXn7TSdauua0ZKFCIVy78QA/exec';
 // ★ 관리자 모드 진입 PIN 번호
 const ADMIN_PIN = '11292612';
 
@@ -409,7 +409,12 @@ function initCommonUI(activePage) {
 
   const data = loadData();
   const gasUrl = getGasUrl();
-  if (data.darkMode) document.body.classList.add('dark-mode');
+  document.body.classList.remove('dark-mode', 'ocean-mode');
+  if (data.themeMode === 'ocean') {
+    document.body.classList.add('ocean-mode');
+  } else if (data.themeMode === 'dark' || (!data.themeMode && data.darkMode)) {
+    document.body.classList.add('dark-mode');
+  }
 
   let statusInitial = '';
   if (session.userId === 'guest') {
@@ -419,6 +424,9 @@ function initCommonUI(activePage) {
   } else {
     statusInitial = `💻 로컬 계정 모드 · 로그인 계정: ${session.userName} (${session.userId})`;
   }
+
+  const curMode = data.themeMode || (data.darkMode ? 'dark' : 'light');
+  const themeBtnLabel = curMode === 'light' ? '🌙 다크' : (curMode === 'dark' ? '🌊 바다' : '☀️ 라이트');
 
   const headerHTML = `
     <div class="nav-container">
@@ -432,7 +440,7 @@ function initCommonUI(activePage) {
         <a href="tools.html" class="${activePage === 'tools' ? 'active' : ''}">시간표·백업</a>
       </nav>
       <div class="nav-actions">
-        <button id="darkModeBtn" class="btn btn-outline btn-sm">${data.darkMode ? '☀️ 라이트' : '🌙 다크'}</button>
+        <button id="darkModeBtn" class="btn btn-outline btn-sm">${themeBtnLabel}</button>
         <button onclick="logoutUser()" class="btn btn-danger btn-sm">로그아웃</button>
       </div>
     </div>
@@ -451,10 +459,15 @@ function initCommonUI(activePage) {
     headerEl.innerHTML = headerHTML;
     document.getElementById('darkModeBtn').addEventListener('click', () => {
       const current = loadData();
-      current.darkMode = !current.darkMode;
+      const prev = current.themeMode || (current.darkMode ? 'dark' : 'light');
+      const next = prev === 'light' ? 'dark' : (prev === 'dark' ? 'ocean' : 'light');
+      current.themeMode = next;
+      current.darkMode = (next === 'dark');
       saveData(current);
-      document.body.classList.toggle('dark-mode');
-      document.getElementById('darkModeBtn').textContent = current.darkMode ? '☀️ 라이트' : '🌙 다크';
+      document.body.classList.remove('dark-mode', 'ocean-mode');
+      if (next === 'dark') document.body.classList.add('dark-mode');
+      if (next === 'ocean') document.body.classList.add('ocean-mode');
+      document.getElementById('darkModeBtn').textContent = next === 'light' ? '🌙 다크' : (next === 'dark' ? '🌊 바다' : '☀️ 라이트');
     });
   }
 }

@@ -531,3 +531,54 @@ table.timetable th {
   cursor: pointer;
   font-size: 0.9rem;
 }
+
+body.ocean-mode {
+  --bg-color: #F5F0F6;
+  --card-bg: #ffffff;
+  --text-main: #24344d;
+  --text-sub: #54698d;
+  --primary: #93B2E6;
+  --primary-soft: #e6f7fc;
+  --accent-mint: #66E2FE;
+  --accent-coral: #e06d78;
+  --accent-yellow: #FFE293;
+  --border-color: #d6e4f5;
+  --shadow: 0 4px 16px rgba(147, 178, 230, 0.2);
+}
+
+body.ocean-mode .btn {
+  background-color: #93B2E6;
+  color: #1c2b45;
+  font-weight: 700;
+}
+
+body.ocean-mode .btn-outline {
+  background-color: #F5F0F6;
+  border-color: #93B2E6;
+  color: #24344d;
+}
+
+body.ocean-mode .badge {
+  background-color: #66E2FE;
+  color: #14283d;
+}
+
+body.ocean-mode .badge-urgent {
+  background-color: #FFE293;
+  color: #4a3700;
+}
+
+body.ocean-mode .progress-fill {
+  background: linear-gradient(90deg, #93B2E6, #66E2FE, #FFE293);
+}
+
+body.ocean-mode .tt-filled {
+  background-color: #93B2E6;
+  color: #162540;
+}
+
+body.ocean-mode .folder-tab.active {
+  background-color: #93B2E6;
+  color: #162540;
+  border-color: #93B2E6;
+}
