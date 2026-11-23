@@ -442,7 +442,7 @@ function initCommonUI(activePage) {
         <a href="schedule.html" class="${activePage === 'schedule' ? 'active' : ''}">과제·캘린더</a>
         <a href="study.html" class="${activePage === 'study' ? 'active' : ''}">집중 타이머</a>
         <a href="grade.html" class="${activePage === 'grade' ? 'active' : ''}">학점 시뮬레이터</a>
-        <a href="team.html" class="${activePage === 'team' ? 'active' : ''}">팀플 매니저</a>
+        <a href="team.html" class="${activePage === 'team' ? 'active' : ''}">팀플</a>
         <a href="tools.html" class="${activePage === 'tools' ? 'active' : ''}">시간표·백업</a>
       </nav>
       <div class="nav-actions">

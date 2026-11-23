@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>과제·캘린더 - CAMPUS MATE</title>
+  <title>일정·캘린더 - CAMPUS MATE</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,12 +11,12 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>📅 과제·시험·일반 일정 D-Day & 월간 캘린더</h1>
-      <p>과제·시험뿐 아니라 동아리, 약속, 개인 일정 등 일반 일정도 등록하고 리스트 뷰와 캘린더 뷰로 한눈에 관리하세요.</p>
+      <h1>📅 일정·캘린더</h1>
+      <p>과제, 시험, 개인 일정을 목록과 캘린더로 관리하세요.</p>
     </div>
 
     <section class="card" style="margin-bottom:20px;">
-      <div class="card-title">새 일정 등록 (과제·시험 / 일반 일정)</div>
+      <div class="card-title">새 일정 추가</div>
       <form id="taskForm" class="form-row">
         <select id="taskSubject" required></select>
         <select id="taskTag">
@@ -45,7 +45,7 @@
     </div>
 
     <section id="listViewSection" class="card">
-      <div class="card-title">등록된 일정 목록 (마감일순 자동 정렬)</div>
+      <div class="card-title">일정 목록</div>
       <ul id="taskList" class="item-list"></ul>
     </section>
 

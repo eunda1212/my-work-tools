@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>학점 시뮬레이터 - CAMPUS MATE</title>
+  <title>학점 계산기 - CAMPUS MATE</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,8 +12,8 @@
   <main class="container">
     <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
       <div>
-        <h1>📊 학기별 학점 & 패논패(P/NP) 시뮬레이터</h1>
-        <p>학기를 나누어 성적을 관리하고, P/NP(패스·논패스) 과목은 평점 제외·졸업학점 자동 합산으로 정확하게 계산합니다.</p>
+        <h1>📊 학점 계산</h1>
+        <p>학기별 성적과 P/NP 과목, 졸업 이수 학점을 확인하세요.</p>
       </div>
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <label for="gpaScaleSelect" style="font-weight:700; font-size:0.92rem;">평점 기준:</label>
@@ -30,7 +30,7 @@
     <div class="grid-2">
       <section class="card">
         <div class="card-title">
-          <span id="gpaCardTitle">목표 평점 달성 시뮬레이터</span>
+          <span id="gpaCardTitle">평점 계산</span>
           <span class="badge" id="overallGpaBadge">전체 누적 평점: 0.00</span>
         </div>
         <div style="margin-bottom:14px;">
@@ -76,9 +76,9 @@
       </section>
 
       <section class="card">
-        <div class="card-title">🎓 전체 학기 누적 졸업 요건 이수 현황</div>
+        <div class="card-title">🎓 졸업 이수 현황</div>
         <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
-          등록된 <strong>모든 학기</strong>의 취득 학점(F, NP 제외 · P 학점 포함)을 합산한 졸업 요건 달성률입니다.
+          전체 학기 취득 학점 기준 달성률입니다.
         </p>
 
         <form id="gradGoalForm" class="form-row" style="margin-bottom:16px; align-items:center;">

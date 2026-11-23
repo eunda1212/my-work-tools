@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>집중 타이머 & 통계 - CAMPUS MATE</title>
+  <title>집중 타이머 - CAMPUS MATE</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -12,8 +12,8 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>⏱️ 집중 뽀모도로 타이머 & 과목별 학습 통계</h1>
-      <p>수강 강의뿐 아니라 자격증·어학·개인 목표 등 원하는 학습 항목을 직접 추가하고, 집중·쉬는 시간과 세트 반복을 설정해 보세요.</p>
+      <h1>⏱️ 집중 타이머</h1>
+      <p>원하는 학습 항목을 추가하고 집중 시간, 쉬는 시간, 반복 세트를 설정하세요.</p>
     </div>
 
     <div class="grid-2">
@@ -29,7 +29,7 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="toggleCustomTopicBox()">+ 학습 항목 추가</button>
         </div>
 
-        <div id="customTopicBox" style="display:none; background:var(--bg-color); border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-bottom:14px; text-align:left;">
+        <div id="customTopicBox" style="display:none; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:14px; text-align:left;">
           <div style="font-size:0.84rem; font-weight:700; margin-bottom:8px;">📌 나만의 학습 항목 추가 / 관리 (강의 외 공부·독서·자격증 등)</div>
           <div class="form-row" style="margin-bottom:8px;">
             <input type="text" id="newCustomTopicInput" placeholder="예: 정보처리기사, 토익 RC, 독서" style="flex:2; min-width:140px;" />
@@ -75,7 +75,7 @@
         </div>
 
         <!-- 현재 세트 진행 상태 표시 -->
-        <div id="sessionStatusBox" style="background:var(--primary-soft); border-radius:12px; padding:8px 12px; margin-bottom:10px; font-size:0.86rem; font-weight:700; color:var(--text-main);">
+        <div id="sessionStatusBox" style="background:var(--primary-soft); border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:0.86rem; font-weight:700; color:var(--text-main);">
           현재 진행: <span id="setProgressText">1 / 4 세트</span> · <span id="phaseDescText">집중 타이머 대기 중</span>
         </div>
 
@@ -84,10 +84,9 @@
         </div>
 
         <div class="form-row" style="justify-content:center; margin-bottom:16px;">
-          <button type="button" class="btn" id="startBtn" onclick="startTimer()">▶ 시작</button>
-          <button type="button" class="btn btn-outline" onclick="pauseTimer()">⏸ 일시정지</button>
+          <button type="button" class="btn" id="toggleRunBtn" onclick="toggleTimerRun()">▶ 시작</button>
           <button type="button" class="btn btn-outline" onclick="skipCurrentPhase()">⏭ 다음 단계</button>
-          <button type="button" class="btn btn-outline" onclick="resetTimer()">🔄 전체 초기화</button>
+          <button type="button" class="btn btn-outline" onclick="resetTimer()">🔄 초기화</button>
         </div>
 
         <!-- 알람 소리 및 백색소음 컨트롤 -->
@@ -106,7 +105,7 @@
 
       <section class="card">
         <div class="card-title">
-          <span>📊 항목별 누적 공부 시간</span>
+          <span>📊 누적 공부 시간</span>
           <span id="totalStudyBadge" class="badge">총 0분</span>
         </div>
         <div style="max-height:260px; display:flex; justify-content:center;">
@@ -135,6 +134,28 @@
     let audioCtx = null;
     let noiseNode = null;
     let isPlayingNoise = false;
+
+    const SUBJECT_PALETTE = ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff', '#a29bfe', '#2ec4b6', '#f77f00'];
+
+    function getColorForSubject(subjectName) {
+      let hash = 0;
+      const str = String(subjectName || '');
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return SUBJECT_PALETTE[Math.abs(hash) % SUBJECT_PALETTE.length];
+    }
+
+    function mergeStudyLogs(rawLogs) {
+      const mergedMap = new Map();
+      (rawLogs || []).forEach(item => {
+        const subject = String(item.subject || '').trim();
+        if (!subject) return;
+        const mins = Number(item.minutes) || 0;
+        mergedMap.set(subject, (mergedMap.get(subject) || 0) + mins);
+      });
+      return Array.from(mergedMap.entries()).map(([subject, minutes]) => ({ subject, minutes }));
+    }
 
     function toggleCustomTopicBox() {
       const box = document.getElementById('customTopicBox');
@@ -258,6 +279,17 @@
       }
     }
 
+    function updateRunButtonUI() {
+      const runBtn = document.getElementById('toggleRunBtn');
+      if (timerInterval) {
+        runBtn.textContent = '⏸ 정지';
+        runBtn.className = 'btn btn-outline';
+      } else {
+        runBtn.textContent = '▶ 시작';
+        runBtn.className = 'btn';
+      }
+    }
+
     function updateStatusUI() {
       const badge = document.getElementById('phaseBadge');
       const setText = document.getElementById('setProgressText');
@@ -273,9 +305,10 @@
       } else {
         badge.textContent = '☕ 쉬는 시간';
         badge.className = 'badge badge-done';
-        descText.textContent = timerInterval ? '편안하게 휴식 중 (자동 전환)' : '휴식 타이머 일시정지';
+        descText.textContent = timerInterval ? '편안하게 휴식 중 (자동 전환)' : '휴식 타이머 정지됨';
         display.style.color = 'var(--accent-mint)';
       }
+      updateRunButtonUI();
     }
 
     function updateDisplay() {
@@ -355,6 +388,14 @@
       updateStatusUI();
     }
 
+    function toggleTimerRun() {
+      if (timerInterval) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
     function skipCurrentPhase() {
       handlePhaseComplete(true);
     }
@@ -365,31 +406,37 @@
 
     function recordStudySession(mins) {
       const data = loadData();
-      data.studyLogs = data.studyLogs || [];
       const subject = document.getElementById('studySubject').value;
-      const existing = data.studyLogs.find(l => l.subject === subject);
+      const merged = mergeStudyLogs(data.studyLogs);
+      const existing = merged.find(l => l.subject === subject);
       if (existing) {
         existing.minutes += mins;
       } else {
-        data.studyLogs.push({ subject, minutes: mins });
+        merged.push({ subject, minutes: mins });
       }
+      data.studyLogs = merged;
       saveData(data);
       renderStudyStats();
     }
 
     function deleteStudyLog(idx) {
       const data = loadData();
-      data.studyLogs = data.studyLogs || [];
-      data.studyLogs.splice(idx, 1);
+      const merged = mergeStudyLogs(data.studyLogs);
+      merged.splice(idx, 1);
+      data.studyLogs = merged;
       saveData(data);
       renderStudyStats();
     }
 
     function renderStudyStats() {
       const data = loadData();
-      data.studyLogs = data.studyLogs || [];
+      const mergedLogs = mergeStudyLogs(data.studyLogs);
+      if (JSON.stringify(data.studyLogs || []) !== JSON.stringify(mergedLogs)) {
+        data.studyLogs = mergedLogs;
+        saveData(data);
+      }
 
-      const totalMinutes = data.studyLogs.reduce((sum, l) => sum + (Number(l.minutes) || 0), 0);
+      const totalMinutes = mergedLogs.reduce((sum, l) => sum + (Number(l.minutes) || 0), 0);
       const hours = Math.floor(totalMinutes / 60);
       const mins = totalMinutes % 60;
       const totalBadge = document.getElementById('totalStudyBadge');
@@ -398,21 +445,27 @@
         : `총 ${totalMinutes}분`;
 
       const listEl = document.getElementById('studyLogList');
-      listEl.innerHTML = data.studyLogs.map((l, idx) => `
-        <li class="list-item">
-          <strong>${l.subject}</strong>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="badge">${l.minutes}분 누적</span>
-            <button type="button" class="btn btn-danger" onclick="deleteStudyLog(${idx})">삭제</button>
-          </div>
-        </li>
-      `).join('') || '<li class="list-item" style="color:var(--text-sub);">아직 기록된 집중 학습 시간이 없습니다.</li>';
+      listEl.innerHTML = mergedLogs.map((l, idx) => {
+        const color = getColorForSubject(l.subject);
+        return `
+          <li class="list-item" style="border-radius:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:${color}; flex-shrink:0;"></span>
+              <strong>${l.subject}</strong>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge" style="border-radius:10px;">${l.minutes}분 누적</span>
+              <button type="button" class="btn btn-danger" style="border-radius:10px;" onclick="deleteStudyLog(${idx})">삭제</button>
+            </div>
+          </li>
+        `;
+      }).join('') || '<li class="list-item" style="border-radius:10px; color:var(--text-sub);">아직 기록된 집중 학습 시간이 없습니다.</li>';
 
       const ctx = document.getElementById('studyChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
-      const labels = data.studyLogs.length ? data.studyLogs.map(l => l.subject) : ['기록 없음'];
-      const values = data.studyLogs.length ? data.studyLogs.map(l => l.minutes) : [1];
-      const colors = data.studyLogs.length ? ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff', '#a29bfe'] : ['#e9ecef'];
+      const labels = mergedLogs.length ? mergedLogs.map(l => l.subject) : ['기록 없음'];
+      const values = mergedLogs.length ? mergedLogs.map(l => l.minutes) : [1];
+      const colors = mergedLogs.length ? mergedLogs.map(l => getColorForSubject(l.subject)) : ['#e9ecef'];
 
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -420,7 +473,8 @@
           labels: labels,
           datasets: [{
             data: values,
-            backgroundColor: colors
+            backgroundColor: colors,
+            borderRadius: 0
           }]
         },
         options: {
