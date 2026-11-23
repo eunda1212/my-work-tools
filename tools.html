@@ -74,7 +74,7 @@
           <select id="ttPeriodStart"></select>
           <span style="align-self:center; font-weight:700;">~</span>
           <select id="ttPeriodEnd"></select>
-          <select id="ttSubject"></select>
+          <input type="text" id="ttSubject" list="ttSubjectOptions" placeholder="강의명 입력 또는 선택" required style="flex:1.2; min-width:140px;" /><datalist id="ttSubjectOptions"></datalist>
           <input type="text" id="ttRoom" placeholder="강의실 (예: 공학관 302)" style="flex:1; min-width:140px;" />
           <button type="submit" class="btn">시간표 추가</button>
         </form>
@@ -143,8 +143,8 @@
 
     function populateSubjects() {
       const data = loadData();
-      const sel = document.getElementById('ttSubject');
-      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="강의">강의</option>';
+      const dl = document.getElementById('ttSubjectOptions');
+      dl.innerHTML = data.subjects.map(s => `<option value="${s.name}">`).join('');
     }
 
     function populatePeriodSelects() {
@@ -225,6 +225,7 @@
       }
 
       saveData(data);
+      document.getElementById('ttSubject').value = '';
       document.getElementById('ttRoom').value = '';
       renderTimetable();
     });
