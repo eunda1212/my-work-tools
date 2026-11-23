@@ -15,7 +15,13 @@
         <h1>📊 학기별 학점 & 패논패(P/NP) 시뮬레이터</h1>
         <p>학기를 나누어 성적을 관리하고, P/NP(패스·논패스) 과목은 평점 제외·졸업학점 자동 합산으로 정확하게 계산합니다.</p>
       </div>
-      <div style="display:flex; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <label for="gpaScaleSelect" style="font-weight:700; font-size:0.92rem;">평점 기준:</label>
+        <select id="gpaScaleSelect" onchange="onGpaScaleChange(this.value)" style="min-width:115px; font-weight:700;">
+          <option value="4.5">4.5 만점</option>
+          <option value="4.3">4.3 만점</option>
+        </select>
+
         <label for="semesterFilter" style="font-weight:700; font-size:0.92rem;">조회 학기:</label>
         <select id="semesterFilter" onchange="onSemesterChange(this.value)" style="min-width:150px; font-weight:700;"></select>
       </div>
@@ -28,7 +34,7 @@
           <span class="badge" id="overallGpaBadge">전체 누적 평점: 0.00</span>
         </div>
         <div style="margin-bottom:14px;">
-          <label style="font-weight:600;">목표 평점 설정: <span id="targetGpaLabel" style="color:var(--primary);">4.00</span> / 4.5</label>
+          <label style="font-weight:600;">목표 평점 설정: <span id="targetGpaLabel" style="color:var(--primary);">4.00</span> / <span id="gpaScaleDenom">4.5</span></label>
           <input type="range" id="targetGpaSlider" min="2.0" max="4.5" step="0.05" value="4.0" style="width:100%; margin-top:6px;" oninput="updateTargetGpa(this.value)" />
         </div>
 
@@ -75,6 +81,19 @@
           등록된 <strong>모든 학기</strong>의 취득 학점(F, NP 제외 · P 학점 포함)을 합산한 졸업 요건 달성률입니다.
         </p>
 
+        <form id="gradGoalForm" class="form-row" style="margin-bottom:16px; align-items:center;">
+          <label style="font-size:0.82rem; font-weight:700;">총학점
+            <input type="number" id="goalTotal" min="1" max="300" style="width:76px; margin-left:4px;" required />
+          </label>
+          <label style="font-size:0.82rem; font-weight:700;">전공
+            <input type="number" id="goalMajor" min="0" max="300" style="width:70px; margin-left:4px;" required />
+          </label>
+          <label style="font-size:0.82rem; font-weight:700;">교양
+            <input type="number" id="goalLiberal" min="0" max="300" style="width:70px; margin-left:4px;" required />
+          </label>
+          <button type="submit" class="btn btn-sm">기준 저장</button>
+        </form>
+
         <div style="margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; font-weight:600;">
             <span>총 이수 학점</span>
@@ -106,6 +125,21 @@
   <script>
     initCommonUI('grade');
 
+    function getCurrentScale() {
+      const data = loadData();
+      return Number(data.gpaScale) === 4.3 ? 4.3 : 4.5;
+    }
+
+    function syncGradeOptionLabels(scale) {
+      const map = scale === 4.3 ? gradePointMap43 : gradePointMap45;
+      const selectEl = document.getElementById('gScore');
+      Array.from(selectEl.options).forEach(opt => {
+        if (map[opt.value] !== undefined) {
+          opt.textContent = `${opt.value} (${map[opt.value].toFixed(1)})`;
+        }
+      });
+    }
+
     function initSemesterSelectors() {
       const data = loadData();
       const filterSel = document.getElementById('semesterFilter');
@@ -117,6 +151,17 @@
 
       formSel.innerHTML = SEMESTERS.map(s => `<option value="${s}">${s}</option>`).join('');
       formSel.value = data.selectedSemester || '1학년 1학기';
+    }
+
+    function onGpaScaleChange(val) {
+      const scale = Number(val) === 4.3 ? 4.3 : 4.5;
+      const data = loadData();
+      data.gpaScale = scale;
+      if (Number(data.targetGpa) > scale) {
+        data.targetGpa = scale;
+      }
+      saveData(data);
+      renderGrades();
     }
 
     function onSemesterChange(val) {
@@ -136,15 +181,36 @@
       renderGrades();
     }
 
+    document.getElementById('gradGoalForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = loadData();
+      data.gradGoal = {
+        ...data.gradGoal,
+        total: Math.max(1, Number(document.getElementById('goalTotal').value) || 130),
+        major: Math.max(0, Number(document.getElementById('goalMajor').value) || 0),
+        liberal: Math.max(0, Number(document.getElementById('goalLiberal').value) || 0)
+      };
+      saveData(data);
+      renderGrades();
+    });
+
     function renderGrades() {
       const data = loadData();
+      const scale = getCurrentScale();
       const selectedSem = document.getElementById('semesterFilter').value;
-      const target = Number(data.targetGpa);
-      document.getElementById('targetGpaSlider').value = target;
+      const target = Math.min(scale, Number(data.targetGpa || 4.0));
+
+      document.getElementById('gpaScaleSelect').value = String(scale);
+      document.getElementById('gpaScaleDenom').textContent = scale.toFixed(1);
+      syncGradeOptionLabels(scale);
+
+      const slider = document.getElementById('targetGpaSlider');
+      slider.max = String(scale);
+      slider.value = target;
       document.getElementById('targetGpaLabel').textContent = target.toFixed(2);
 
-      const overallGpa = calculateGPA(data.grades);
-      document.getElementById('overallGpaBadge').textContent = `전체 누적 평점: ${overallGpa.toFixed(2)}`;
+      const overallGpa = calculateGPA(data.grades, scale);
+      document.getElementById('overallGpaBadge').textContent = `전체 누적 평점: ${overallGpa.toFixed(2)} / ${scale.toFixed(1)}`;
 
       const filteredGrades = selectedSem === 'ALL'
         ? data.grades
@@ -154,8 +220,8 @@
         ? '전체 누적 평점 시뮬레이터'
         : `${selectedSem} 평점 시뮬레이터`;
 
-      const gpa = calculateGPA(filteredGrades);
-      document.getElementById('currentGpaText').textContent = `${gpa.toFixed(2)} / 4.50`;
+      const gpa = calculateGPA(filteredGrades, scale);
+      document.getElementById('currentGpaText').textContent = `${gpa.toFixed(2)} / ${scale.toFixed(2)}`;
       const pct = Math.min(100, (gpa / target) * 100);
       document.getElementById('gpaProgressBar').style.width = `${pct}%`;
 
@@ -180,19 +246,33 @@
         `;
       }).join('') || '<li class="list-item" style="color:var(--text-sub);">이 학기에 등록된 성적이 없습니다.</li>';
 
+      const goalTotal = Number(data.gradGoal.total) || 130;
+      const goalMajor = Number(data.gradGoal.major) || 65;
+      const goalLiberal = Number(data.gradGoal.liberal) || 35;
+
+      if (document.activeElement !== document.getElementById('goalTotal')) {
+        document.getElementById('goalTotal').value = goalTotal;
+      }
+      if (document.activeElement !== document.getElementById('goalMajor')) {
+        document.getElementById('goalMajor').value = goalMajor;
+      }
+      if (document.activeElement !== document.getElementById('goalLiberal')) {
+        document.getElementById('goalLiberal').value = goalLiberal;
+      }
+
       const validGrades = data.grades.filter(g => g.grade !== 'F' && g.grade !== 'NP');
       const curTotal = validGrades.reduce((s, g) => s + Number(g.credit), 0) + (data.gradGoal.prevEarned || 0);
       const curMajor = validGrades.filter(g => g.type === '전공').reduce((s, g) => s + Number(g.credit), 0) + (data.gradGoal.prevMajor || 0);
       const curLiberal = validGrades.filter(g => g.type === '교양').reduce((s, g) => s + Number(g.credit), 0) + (data.gradGoal.prevLiberal || 0);
 
-      document.getElementById('totalCreditStat').textContent = `${curTotal} / ${data.gradGoal.total}학점`;
-      document.getElementById('barTotal').style.width = `${Math.min(100, (curTotal / data.gradGoal.total) * 100)}%`;
+      document.getElementById('totalCreditStat').textContent = `${curTotal} / ${goalTotal}학점`;
+      document.getElementById('barTotal').style.width = `${Math.min(100, (curTotal / goalTotal) * 100)}%`;
 
-      document.getElementById('majorCreditStat').textContent = `${curMajor} / ${data.gradGoal.major}학점`;
-      document.getElementById('barMajor').style.width = `${Math.min(100, (curMajor / data.gradGoal.major) * 100)}%`;
+      document.getElementById('majorCreditStat').textContent = `${curMajor} / ${goalMajor}학점`;
+      document.getElementById('barMajor').style.width = `${Math.min(100, (curMajor / goalMajor) * 100)}%`;
 
-      document.getElementById('liberalCreditStat').textContent = `${curLiberal} / ${data.gradGoal.liberal}학점`;
-      document.getElementById('barLiberal').style.width = `${Math.min(100, (curLiberal / data.gradGoal.liberal) * 100)}%`;
+      document.getElementById('liberalCreditStat').textContent = `${curLiberal} / ${goalLiberal}학점`;
+      document.getElementById('barLiberal').style.width = `${Math.min(100, (curLiberal / goalLiberal) * 100)}%`;
     }
 
     document.getElementById('gradeForm').addEventListener('submit', (e) => {

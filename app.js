@@ -21,6 +21,7 @@ const SEMESTERS = [
 const defaultData = {
   darkMode: false,
   themeMode: 'ocean',
+  gpaScale: 4.5,
   selectedSemester: '1학년 1학기',
   subjects: [],
   tasks: [],
@@ -41,6 +42,7 @@ const defaultData = {
 const guestDemoData = {
   darkMode: false,
   themeMode: 'ocean',
+  gpaScale: 4.5,
   selectedSemester: '1학년 1학기',
   subjects: [
     { id: 's1', semester: '1학년 1학기', name: '웹프로그래밍', prof: '김교수', credit: 3, type: '전공' },
@@ -476,18 +478,24 @@ function initCommonUI(activePage) {
   }
 }
 
-const gradePointMap = {
+const gradePointMap45 = {
   'A+': 4.5, 'A0': 4.0, 'B+': 3.5, 'B0': 3.0,
   'C+': 2.5, 'C0': 2.0, 'D+': 1.5, 'D0': 1.0, 'F': 0.0
 };
 
-function calculateGPA(grades) {
+const gradePointMap43 = {
+  'A+': 4.3, 'A0': 4.0, 'B+': 3.3, 'B0': 3.0,
+  'C+': 2.3, 'C0': 2.0, 'D+': 1.3, 'D0': 1.0, 'F': 0.0
+};
+
+function calculateGPA(grades, scale = 4.5) {
+  const pointMap = Number(scale) === 4.3 ? gradePointMap43 : gradePointMap45;
   let totalCredits = 0;
   let totalPoints = 0;
   grades.forEach(g => {
     if (g.grade === 'P' || g.grade === 'NP') return;
     const cr = Number(g.credit) || 0;
-    const pt = gradePointMap[g.grade] ?? 0;
+    const pt = pointMap[g.grade] ?? 0;
     totalCredits += cr;
     totalPoints += cr * pt;
   });

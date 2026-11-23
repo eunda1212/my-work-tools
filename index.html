@@ -107,9 +107,10 @@
       const totalMin = data.studyLogs.reduce((sum, item) => sum + item.minutes, 0);
       document.getElementById('dash-study-time').textContent = `${totalMin}분`;
 
-      const gpa = calculateGPA(data.grades);
+      const scale = Number(data.gpaScale) === 4.3 ? 4.3 : 4.5;
+      const gpa = calculateGPA(data.grades, scale);
       document.getElementById('dash-gpa').textContent = gpa.toFixed(2);
-      document.getElementById('dash-gpa-goal').textContent = `목표 평점: ${Number(data.targetGpa).toFixed(2)} / 4.5`;
+      document.getElementById('dash-gpa-goal').textContent = `목표 평점: ${Math.min(scale, Number(data.targetGpa)).toFixed(2)} / ${scale.toFixed(1)}`;
 
       const myTeams = getMyTeams();
       const activeTeam = myTeams.reduce((sum, tm) => sum + (tm.tasks || []).filter(t => t.status !== 'done').length, 0);
