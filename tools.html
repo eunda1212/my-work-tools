@@ -59,7 +59,10 @@
       <section class="card" style="grid-column: span 2;">
         <div class="card-title">
           <span id="ttHeaderTitle">🗓️ 주간 강의 시간표</span>
-          <span style="font-size:0.8rem; color:var(--text-sub); font-weight:500;">칸을 클릭하면 해당 강의가 삭제됩니다</span>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span id="editModeHint" style="font-size:0.8rem; color:var(--text-sub); font-weight:500;">수정 모드를 켜면 과목을 눌러 삭제할 수 있습니다</span>
+            <button type="button" id="editModeBtn" class="btn btn-outline btn-sm" onclick="toggleEditMode()">✏️ 수정 모드: 끔</button>
+          </div>
         </div>
 
         <form id="ttForm" class="form-row">
@@ -74,7 +77,8 @@
           <select id="ttPeriodStart"></select>
           <span style="align-self:center; font-weight:700;">~</span>
           <select id="ttPeriodEnd"></select>
-          <input type="text" id="ttSubject" list="ttSubjectOptions" placeholder="강의명 입력 또는 선택" required style="flex:1.2; min-width:140px;" /><datalist id="ttSubjectOptions"></datalist>
+          <input type="text" id="ttSubject" list="ttSubjectOptions" placeholder="강의명 입력 또는 선택" required style="flex:1.2; min-width:140px;" />
+          <datalist id="ttSubjectOptions"></datalist>
           <input type="text" id="ttRoom" placeholder="강의실 (예: 공학관 302)" style="flex:1; min-width:140px;" />
           <button type="submit" class="btn">시간표 추가</button>
         </form>
@@ -104,6 +108,39 @@
   <script>
     initCommonUI('tools');
 
+    let isEditMode = false;
+
+    const BLOCK_PALETTE = [
+      { bg: '#dce8ff', fg: '#152c5b', border: '#9abbf5' },
+      { bg: '#d5f5e3', fg: '#144529', border: '#8ce0b0' },
+      { bg: '#fff0bd', fg: '#543b00', border: '#f5cf5b' },
+      { bg: '#ffe0e3', fg: '#5c1824', border: '#f59aa6' },
+      { bg: '#e8dcff', fg: '#331963', border: '#bea3f5' },
+      { bg: '#d4f3f9', fg: '#0f3d4c', border: '#7cd7eb' },
+      { bg: '#ffe6cc', fg: '#592d06', border: '#f5b87a' },
+      { bg: '#e2f0cb', fg: '#2d470c', border: '#b3d97e' }
+    ];
+
+    function toggleEditMode() {
+      isEditMode = !isEditMode;
+      updateEditModeUI();
+      renderTimetable();
+    }
+
+    function updateEditModeUI() {
+      const btn = document.getElementById('editModeBtn');
+      const hint = document.getElementById('editModeHint');
+      if (isEditMode) {
+        btn.textContent = '✏️ 수정 모드: 켜짐';
+        btn.className = 'btn btn-danger btn-sm';
+        hint.textContent = '수정 모드가 켜졌습니다: 삭제할 과목 블록을 클릭하세요';
+      } else {
+        btn.textContent = '✏️ 수정 모드: 끔';
+        btn.className = 'btn btn-outline btn-sm';
+        hint.textContent = '수정 모드를 켜면 과목을 눌러 삭제할 수 있습니다';
+      }
+    }
+
     function initTtPage() {
       const data = loadData();
       const semSel = document.getElementById('ttSemesterSelect');
@@ -116,6 +153,7 @@
       document.getElementById('cfgPeriodMin').value = cfg.periodMinutes;
       document.getElementById('cfgMaxPeriods').value = cfg.maxPeriods;
 
+      updateEditModeUI();
       populateSubjects();
       populatePeriodSelects();
       renderTimetable();
@@ -175,6 +213,100 @@
       }
     });
 
+    function buildMergedDayBlocks(day, semEntries, maxPeriods) {
+      const blocks = [];
+      let p = 1;
+      while (p <= maxPeriods) {
+        const entry = semEntries.find(item => item.day === day && Number(item.period) === p);
+        if (!entry) {
+          p++;
+          continue;
+        }
+        const startP = p;
+        const periods = [p];
+        let nextP = p + 1;
+        while (nextP <= maxPeriods) {
+          const nextEntry = semEntries.find(item => item.day === day && Number(item.period) === nextP);
+          if (
+            nextEntry &&
+            nextEntry.subject === entry.subject &&
+            (nextEntry.room || '') === (entry.room || '')
+          ) {
+            periods.push(nextP);
+            nextP++;
+          } else {
+            break;
+          }
+        }
+        blocks.push({
+          day,
+          startPeriod: startP,
+          rowspan: periods.length,
+          periods,
+          subject: entry.subject,
+          room: entry.room || ''
+        });
+        p = nextP;
+      }
+      return blocks;
+    }
+
+    function assignNonOverlappingColors(days, dayBlocksMap, maxPeriods) {
+      const cellColorIdx = {};
+      const blockColorMap = {};
+
+      days.forEach((day, dIdx) => {
+        const blocks = dayBlocksMap[day] || [];
+        blocks.forEach((blk, bIdx) => {
+          const forbidden = new Set();
+
+          // 같은 요일 직전 블록의 색상 제외
+          if (bIdx > 0) {
+            const prevKey = `${days[dIdx]}:${blocks[bIdx - 1].startPeriod}`;
+            if (blockColorMap[prevKey] !== undefined) {
+              forbidden.add(blockColorMap[prevKey]);
+            }
+          }
+
+          // 왼쪽 인접 요일에서 겹치는 행의 색상 제외
+          if (dIdx > 0) {
+            const leftDay = days[dIdx - 1];
+            blk.periods.forEach(pr => {
+              const leftKey = `${leftDay}:${pr}`;
+              if (cellColorIdx[leftKey] !== undefined) {
+                forbidden.add(cellColorIdx[leftKey]);
+              }
+            });
+          }
+
+          // 과목명 기반 해시를 시작점으로 하되 인접 색상과 겹치지 않는 인덱스 선택
+          let hash = 0;
+          const seedStr = `${blk.subject}-${day}-${blk.startPeriod}`;
+          for (let i = 0; i < seedStr.length; i++) {
+            hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const startIdx = Math.abs(hash) % BLOCK_PALETTE.length;
+
+          let chosen = startIdx;
+          for (let offset = 0; offset < BLOCK_PALETTE.length; offset++) {
+            const candidate = (startIdx + offset) % BLOCK_PALETTE.length;
+            if (!forbidden.has(candidate)) {
+              chosen = candidate;
+              break;
+            }
+          }
+
+          const key = `${day}:${blk.startPeriod}`;
+          blockColorMap[key] = chosen;
+          blk.periods.forEach(pr => {
+            cellColorIdx[`${day}:${pr}`] = chosen;
+          });
+        });
+      });
+
+      return blockColorMap;
+    }
+
     function renderTimetable() {
       const data = loadData();
       const currentSem = document.getElementById('ttSemesterSelect').value;
@@ -182,9 +314,26 @@
       document.getElementById('ttHeaderTitle').textContent = `🗓️ [${currentSem}] 주간 강의 시간표`;
 
       const days = ['월', '화', '수', '목', '금', '토'];
-      let html = `<thead><tr><th style="min-width:110px;">교시 / 시간</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
-
       const semEntries = data.timetable.filter(item => item.semester === currentSem);
+
+      const dayBlocksMap = {};
+      const blockByStart = {};
+      const coveredCells = new Set();
+
+      days.forEach(d => {
+        const blocks = buildMergedDayBlocks(d, semEntries, cfg.maxPeriods);
+        dayBlocksMap[d] = blocks;
+        blocks.forEach(blk => {
+          blockByStart[`${d}:${blk.startPeriod}`] = blk;
+          for (let i = 1; i < blk.periods.length; i++) {
+            coveredCells.add(`${d}:${blk.periods[i]}`);
+          }
+        });
+      });
+
+      const blockColorMap = assignNonOverlappingColors(days, dayBlocksMap, cfg.maxPeriods);
+
+      let html = `<thead><tr><th style="min-width:110px;">교시 / 시간</th>${days.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>`;
 
       for (let p = 1; p <= cfg.maxPeriods; p++) {
         const timeRange = formatPeriodTime(p, cfg);
@@ -194,16 +343,36 @@
             <strong>${p}교시</strong>${nightBadge}<br>
             <span style="font-size:0.74rem; color:var(--text-sub);">${timeRange}</span>
           </td>`;
+
         days.forEach(d => {
-          const entry = semEntries.find(item => item.day === d && Number(item.period) === p);
-          if (entry) {
-            html += `<td class="tt-filled" style="cursor:pointer;" title="클릭 시 삭제" onclick="removeTimetable('${d}', ${p})">
-              ${entry.subject}<br><span style="font-size:0.75rem; font-weight:400;">${entry.room || ''}</span>
+          const cellKey = `${d}:${p}`;
+          if (coveredCells.has(cellKey)) {
+            return;
+          }
+
+          const blk = blockByStart[cellKey];
+          if (blk) {
+            const palette = BLOCK_PALETTE[blockColorMap[cellKey] ?? 0];
+            const encodedPeriods = encodeURIComponent(JSON.stringify(blk.periods));
+            const encodedSubject = encodeURIComponent(blk.subject);
+            const rowspanAttr = blk.rowspan > 1 ? ` rowspan="${blk.rowspan}"` : '';
+            const editClass = isEditMode ? ' tt-editable' : '';
+            const titleAttr = isEditMode
+              ? '클릭하여 이 과목 삭제'
+              : `${blk.subject} (${blk.periods.length}교시)`;
+            const clickAttr = isEditMode
+              ? ` onclick="removeMergedBlock('${d}', '${encodedPeriods}', '${encodedSubject}')"`
+              : '';
+
+            html += `<td${rowspanAttr} class="tt-filled${editClass}" title="${titleAttr}"${clickAttr} style="background-color:${palette.bg}; color:${palette.fg}; border-color:${palette.border};">
+              <div>${blk.subject}</div>
+              ${blk.room ? `<div style="font-size:0.75rem; font-weight:400; opacity:0.9;">${blk.room}</div>` : ''}
             </td>`;
           } else {
-            html += `<td></td>`;
+            html += `<td style="background-color:var(--bg-color);"></td>`;
           }
         });
+
         html += `</tr>`;
       }
       html += `</tbody>`;
@@ -217,14 +386,17 @@
       const day = document.getElementById('ttDay').value;
       const pStart = Number(document.getElementById('ttPeriodStart').value);
       const pEnd = Number(document.getElementById('ttPeriodEnd').value);
-      const subject = document.getElementById('ttSubject').value;
+      const subject = document.getElementById('ttSubject').value.trim();
       const room = document.getElementById('ttRoom').value.trim();
+      if (!subject) return;
 
       const from = Math.min(pStart, pEnd);
       const to = Math.max(pStart, pEnd);
 
       for (let p = from; p <= to; p++) {
-        data.timetable = data.timetable.filter(item => !(item.semester === currentSem && item.day === day && Number(item.period) === p));
+        data.timetable = data.timetable.filter(
+          item => !(item.semester === currentSem && item.day === day && Number(item.period) === p)
+        );
         data.timetable.push({ semester: currentSem, day, period: p, subject, room });
       }
 
@@ -234,10 +406,19 @@
       renderTimetable();
     });
 
-    function removeTimetable(day, period) {
+    function removeMergedBlock(day, encodedPeriods, encodedSubject) {
+      if (!isEditMode) return;
+      const periods = JSON.parse(decodeURIComponent(encodedPeriods));
+      const subjectName = decodeURIComponent(encodedSubject);
+      if (!confirm(`'${day}요일 ${subjectName}' (${periods.join(', ')}교시) 시간표를 삭제하시겠습니까?`)) {
+        return;
+      }
       const data = loadData();
       const currentSem = document.getElementById('ttSemesterSelect').value;
-      data.timetable = data.timetable.filter(item => !(item.semester === currentSem && item.day === day && Number(item.period) === period));
+      const periodSet = new Set(periods.map(Number));
+      data.timetable = data.timetable.filter(
+        item => !(item.semester === currentSem && item.day === day && periodSet.has(Number(item.period)))
+      );
       saveData(data);
       renderTimetable();
     }

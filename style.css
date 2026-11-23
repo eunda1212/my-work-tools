@@ -1,4 +1,9 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@font-face {
+  font-family: 'LeeSunSinDotum';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/YiSunShinDotumM.woff') format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
 
 :root {
   --bg-color: #f8f9fc;
@@ -30,7 +35,7 @@ body.dark-mode {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'GangwonEducationModuche', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'LeeSunSinDotum', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -46,16 +51,7 @@ label,
 .folder-tab,
 .member-chip,
 table.timetable {
-  font-family: 'Pretendard', 'GangwonEducationModuche', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.logo,
-.page-header h1,
-.card-title,
-#timerDisplay {
-  font-family: 'GangwonEducationModuche', 'Pretendard', sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: 'LeeSunSinDotum', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body {
@@ -123,7 +119,7 @@ body {
 .auth-tab.active {
   background-color: var(--card-bg);
   color: var(--primary);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .input-group {
@@ -186,7 +182,8 @@ header {
   transition: all 0.2s;
 }
 
-.nav-links a:hover, .nav-links a.active {
+.nav-links a:hover,
+.nav-links a.active {
   background-color: var(--primary-soft);
   color: var(--primary);
 }
@@ -285,6 +282,8 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .form-row {
@@ -294,7 +293,9 @@ header {
   margin-bottom: 14px;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   padding: 10px 13px;
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -304,7 +305,9 @@ input, select, textarea {
   outline: none;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--primary);
 }
 
@@ -320,8 +323,13 @@ input:focus, select:focus, textarea:focus {
   color: #fff;
 }
 
-.btn:hover { opacity: 0.9; }
-.btn:active { transform: scale(0.98); }
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
 
 .btn-outline {
   background-color: transparent;
@@ -461,15 +469,19 @@ input:focus, select:focus, textarea:focus {
 
 table.timetable {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 4px;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
-table.timetable th, table.timetable td {
+table.timetable th,
+table.timetable td {
   border: 1px solid var(--border-color);
-  padding: 10px 6px;
+  padding: 8px 6px;
   height: 46px;
+  border-radius: 8px;
+  vertical-align: middle;
 }
 
 table.timetable th {
@@ -478,10 +490,19 @@ table.timetable th {
 }
 
 .tt-filled {
-  background-color: var(--primary);
-  color: #fff;
-  font-weight: 600;
-  border-radius: 6px;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.tt-filled.tt-editable {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75), 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.tt-filled.tt-editable:hover {
+  transform: scale(0.98);
+  filter: brightness(0.95);
 }
 
 .stat-big {
@@ -570,7 +591,6 @@ table.timetable th {
 
 /* ==========================================
    🌊 바다 모드 (Ocean Mode)
-   팔레트: #93B2E6 (오션블루), #66E2FE (아쿠아시안), #FFE293 (샌드옐로우), #F5F0F6 (라벤더화이트)
    ========================================== */
 body.ocean-mode {
   --bg-color: #F5F0F6;
@@ -665,12 +685,6 @@ body.ocean-mode .progress-fill {
 body.ocean-mode table.timetable th {
   background-color: #66E2FE;
   color: #10253f;
-}
-
-body.ocean-mode .tt-filled {
-  background: linear-gradient(135deg, #93B2E6, #66E2FE);
-  color: #10253f;
-  font-weight: 700;
 }
 
 body.ocean-mode .folder-tab.active {
