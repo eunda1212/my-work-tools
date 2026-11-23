@@ -5,7 +5,7 @@ const SHARED_TEAMS_KEY = 'campus_mate_shared_teams';
 const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 
 // ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
-const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzJ23bWjBf4qMg10xknmzK1dHFRe-T6JrgwlYqXhLPS5zUf4MKTDqP0uyP7jHaaxhSlzg/exec';
 // ★ 관리자 모드 진입 PIN 번호
 const ADMIN_PIN = '11292612';
 
