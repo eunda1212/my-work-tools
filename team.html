@@ -18,7 +18,6 @@
       <button class="btn" onclick="openNewFolderModal()">📁 + 새 팀플 폴더 만들기</button>
     </div>
 
-    <!-- 새 팀플 폴더 생성 박스 (토글) -->
     <section id="newFolderBox" class="card" style="display:none; margin-bottom:18px; border:2px solid var(--primary);">
       <div class="card-title">
         <span>📁 새 팀 프로젝트 폴더 생성</span>
@@ -31,12 +30,9 @@
       </form>
     </section>
 
-    <!-- 팀플 프로젝트 폴더 탭 목록 -->
     <div class="folder-bar" id="folderTabsBar"></div>
 
-    <!-- 선택된 팀플 폴더 상세 영역 -->
     <div id="activeTeamWorkspace">
-      <!-- 팀원 계정 ID 초대 및 멤버 현황 카드 -->
       <section class="card" style="margin-bottom:20px;">
         <div class="card-title">
           <span id="currentTeamHeader">👥 참여 팀원 관리</span>
@@ -51,7 +47,6 @@
         <div id="memberChipsArea" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
       </section>
 
-      <!-- 새 팀플 업무 배정 (초대된 팀원 목록에서 선택) -->
       <section class="card" style="margin-bottom:20px;">
         <div class="card-title">📌 팀원별 역할 배정</div>
         <form id="teamTaskForm" class="form-row">
@@ -61,7 +56,6 @@
         </form>
       </section>
 
-      <!-- 칸반 보드 3열 -->
       <div class="grid-3">
         <div class="kanban-col">
           <div class="card-title">📝 할 일 (To Do)</div>
@@ -77,7 +71,6 @@
         </div>
       </div>
 
-      <!-- 팀 회의록 -->
       <section class="card">
         <div class="card-title">🗒️ 팀 회의록 기록</div>
         <form id="meetingForm" class="form-row">
@@ -148,7 +141,6 @@
       const team = getCurrentTeam();
       document.getElementById('currentTeamHeader').textContent = `👥 [${team.subject || '프로젝트'}] ${team.name} — 참여 팀원 (${team.members.length}명)`;
 
-      // 팀원 칩 렌더링
       const session = getSession();
       const chipsArea = document.getElementById('memberChipsArea');
       chipsArea.innerHTML = team.members.map(m => `
@@ -158,13 +150,11 @@
         </span>
       `).join('');
 
-      // 역할 배정 드롭다운에 현재 폴더 팀원 목록 채우기
       const memberSelect = document.getElementById('tMemberSelect');
       memberSelect.innerHTML = team.members.map(m => `
         <option value="${m.userId}">${m.userName} (${m.userId})</option>
       `).join('');
 
-      // 칸반 보드 렌더링
       ['todo', 'doing', 'done'].forEach(st => {
         const col = document.getElementById(`col-${st}`);
         const items = (team.tasks || []).filter(t => t.status === st);
@@ -184,7 +174,6 @@
         `).join('') || '<p style="font-size:0.84rem; color:var(--text-sub); text-align:center; padding:20px 0;">항목 없음</p>';
       });
 
-      // 회의록 렌더링
       const mList = document.getElementById('meetingList');
       mList.innerHTML = (team.meetings || []).map(m => `
         <li class="list-item">
@@ -197,7 +186,6 @@
       `).join('') || '<li class="list-item" style="color:var(--text-sub);">등록된 회의록이 없습니다.</li>';
     }
 
-    // 새 팀플 폴더 생성
     document.getElementById('newFolderForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const session = getSession();
@@ -223,7 +211,6 @@
       renderAllTeamUI();
     });
 
-    // 계정 ID로 팀원 초대
     document.getElementById('inviteMemberForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const team = getCurrentTeam();
@@ -264,7 +251,6 @@
       renderAllTeamUI();
     }
 
-    // 역할 배정 추가
     document.getElementById('teamTaskForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const team = getCurrentTeam();
@@ -305,7 +291,6 @@
       renderAllTeamUI();
     }
 
-    // 회의록 추가
     document.getElementById('meetingForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const team = getCurrentTeam();

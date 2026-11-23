@@ -46,7 +46,6 @@ body {
   line-height: 1.5;
 }
 
-/* Login Page Layout */
 .login-wrapper {
   min-height: 100vh;
   display: flex;
@@ -121,7 +120,6 @@ body {
   color: var(--text-main);
 }
 
-/* Header & Navigation */
 header {
   background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
@@ -474,7 +472,6 @@ table.timetable th {
   margin: 6px 0;
 }
 
-/* Team Folder Tabs & Member Chips */
 .folder-bar {
   display: flex;
   gap: 8px;

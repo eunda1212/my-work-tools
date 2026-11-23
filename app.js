@@ -6,8 +6,8 @@ const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 
 // ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
 const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
-// ★ 관리자 모드 진입 PIN 번호 (원하는 비밀번호로 변경 가능)
-const ADMIN_PIN = 'molemole';
+// ★ 관리자 모드 진입 PIN 번호
+const ADMIN_PIN = '11292612';
 
 const SEMESTERS = [
   '1학년 1학기', '1학년 2학기',
@@ -17,7 +17,27 @@ const SEMESTERS = [
   '계절학기'
 ];
 
+// 신규 가입 사용자용 깨끗한 초기 데이터 (완전 빈 상태)
 const defaultData = {
+  darkMode: false,
+  selectedSemester: '1학년 1학기',
+  subjects: [],
+  tasks: [],
+  studyLogs: [],
+  grades: [],
+  targetGpa: 4.0,
+  gradGoal: { total: 130, major: 65, liberal: 35, prevEarned: 0, prevMajor: 0, prevLiberal: 0 },
+  timetableConfig: {
+    startHour: 9,
+    startMin: 0,
+    periodMinutes: 60,
+    maxPeriods: 12 // 야간 수업(12교시)까지 기본 지원 및 자유 변경 가능
+  },
+  timetable: []
+};
+
+// 체험 계정(guest) 전용 샘플 데이터
+const guestDemoData = {
   darkMode: false,
   selectedSemester: '1학년 1학기',
   subjects: [
@@ -45,7 +65,7 @@ const defaultData = {
     startHour: 9,
     startMin: 0,
     periodMinutes: 60,
-    maxPeriods: 12 // 야간 수업(12교시, 밤 9시)까지 기본 지원 및 자유 변경 가능
+    maxPeriods: 12
   },
   timetable: [
     { semester: '1학년 1학기', day: '월', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
@@ -70,7 +90,6 @@ function setAdminGasUrl(url) {
   }
 }
 
-// 숨김 관리자 모달 열기 (PIN 검증 후 서버 URL 설정 창 표시)
 function triggerAdminMode() {
   const pin = prompt('관리자 비밀번호를 입력하세요:');
   if (pin === null) return;
@@ -146,7 +165,8 @@ function loadData() {
   const key = getUserStorageKey(uid);
   const raw = localStorage.getItem(key);
   if (!raw) {
-    const clone = JSON.parse(JSON.stringify(defaultData));
+    const baseTemplate = (uid === 'guest') ? guestDemoData : defaultData;
+    const clone = JSON.parse(JSON.stringify(baseTemplate));
     localStorage.setItem(key, JSON.stringify(clone));
     return clone;
   }
@@ -154,7 +174,6 @@ function loadData() {
     const parsed = JSON.parse(raw);
     const merged = { ...defaultData, ...parsed };
     merged.timetableConfig = { ...defaultData.timetableConfig, ...(parsed.timetableConfig || {}) };
-    // 기존 데이터 하위 호환: semester 필드가 없으면 기본 학기로 보정
     merged.grades = (merged.grades || []).map(g => ({ semester: merged.selectedSemester || '1학년 1학기', ...g }));
     merged.timetable = (merged.timetable || []).map(t => ({ semester: merged.selectedSemester || '1학년 1학기', ...t }));
     return merged;
@@ -249,7 +268,7 @@ function getMyTeams() {
   const session = getSession();
   if (!session) return [];
   let all = getAllLocalTeams();
-  if (all.length === 0) {
+  if (all.length === 0 && session.userId === 'guest') {
     all = getDefaultTeams(session);
     setAllLocalTeams(all);
   }
@@ -440,7 +459,6 @@ function initCommonUI(activePage) {
   }
 }
 
-// 패논패(P / NP) 지원 학점 계산 (P/NP는 평점 분모·분자에서 제외, P만 졸업 학점에 합산)
 const gradePointMap = {
   'A+': 4.5, 'A0': 4.0, 'B+': 3.5, 'B0': 3.0,
   'C+': 2.5, 'C0': 2.0, 'D+': 1.5, 'D0': 1.0, 'F': 0.0
@@ -450,7 +468,7 @@ function calculateGPA(grades) {
   let totalCredits = 0;
   let totalPoints = 0;
   grades.forEach(g => {
-    if (g.grade === 'P' || g.grade === 'NP') return; // 패논패 과목은 평점 계산에서 제외
+    if (g.grade === 'P' || g.grade === 'NP') return;
     const cr = Number(g.credit) || 0;
     const pt = gradePointMap[g.grade] ?? 0;
     totalCredits += cr;
@@ -459,7 +477,6 @@ function calculateGPA(grades) {
   return totalCredits === 0 ? 0 : (totalPoints / totalCredits);
 }
 
-// 교시별 실제 시각 문자열 계산 함수 (예: 1교시 (09:00~10:00))
 function formatPeriodTime(periodNum, cfg) {
   const startTotalMin = (Number(cfg.startHour) * 60) + Number(cfg.startMin) + (periodNum - 1) * Number(cfg.periodMinutes);
   const endTotalMin = startTotalMin + Number(cfg.periodMinutes);

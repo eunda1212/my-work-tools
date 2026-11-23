@@ -99,7 +99,7 @@
             <button class="btn btn-danger" onclick="deleteTask('${t.id}')">삭제</button>
           </div>
         </li>
-      `).join('') || '<li class="list-item">해당 조건의 일정이 없습니다.</li>';
+      `).join('') || '<li class="list-item" style="color:var(--text-sub);">등록된 일정이 없습니다.</li>';
       renderCalendar();
     }
 

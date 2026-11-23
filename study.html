@@ -165,17 +165,21 @@
           <strong>${l.subject}</strong>
           <span class="badge">${l.minutes}분 누적</span>
         </li>
-      `).join('');
+      `).join('') || '<li class="list-item" style="color:var(--text-sub);">아직 기록된 집중 학습 시간이 없습니다.</li>';
 
       const ctx = document.getElementById('studyChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
+      const labels = data.studyLogs.length ? data.studyLogs.map(l => l.subject) : ['기록 없음'];
+      const values = data.studyLogs.length ? data.studyLogs.map(l => l.minutes) : [1];
+      const colors = data.studyLogs.length ? ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff'] : ['#e9ecef'];
+
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: data.studyLogs.map(l => l.subject),
+          labels: labels,
           datasets: [{
-            data: data.studyLogs.map(l => l.minutes),
-            backgroundColor: ['#7c83fd', '#6bcb77', '#ffd93d', '#ff6b6b', '#4d96ff']
+            data: values,
+            backgroundColor: colors
           }]
         },
         options: {

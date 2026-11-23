@@ -21,7 +21,6 @@
       </div>
     </div>
 
-    <!-- 학교별 교시 시간 & 야간 교시 커스텀 설정 바 -->
     <section class="card" style="margin-bottom:20px;">
       <div class="card-title">
         <span>⚙️ 학교별 교시 시간 & 야간 수업 설정</span>
@@ -164,7 +163,6 @@
       endSel.innerHTML = opts;
     }
 
-    // 시작 교시 변경 시 종료 교시도 자동으로 최소 시작 교시 이상으로 맞춤
     document.getElementById('ttPeriodStart').addEventListener('change', (e) => {
       const s = Number(e.target.value);
       const endSel = document.getElementById('ttPeriodEnd');
@@ -279,7 +277,7 @@
 
     function resetAllData() {
       const session = getSession();
-      if (confirm('현재 계정의 데이터를 초기 샘플 상태로 되돌리시겠습니까?')) {
+      if (confirm('현재 계정의 데이터를 초기 상태로 되돌리시겠습니까?')) {
         if (session) localStorage.removeItem(getUserStorageKey(session.userId));
         location.reload();
       }

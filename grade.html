@@ -143,11 +143,9 @@
       document.getElementById('targetGpaSlider').value = target;
       document.getElementById('targetGpaLabel').textContent = target.toFixed(2);
 
-      // 전체 누적 평점 배지
       const overallGpa = calculateGPA(data.grades);
       document.getElementById('overallGpaBadge').textContent = `전체 누적 평점: ${overallGpa.toFixed(2)}`;
 
-      // 선택된 학기 필터링
       const filteredGrades = selectedSem === 'ALL'
         ? data.grades
         : data.grades.filter(g => g.semester === selectedSem);
@@ -182,7 +180,6 @@
         `;
       }).join('') || '<li class="list-item" style="color:var(--text-sub);">이 학기에 등록된 성적이 없습니다.</li>';
 
-      // 졸업 학점 계산 (F와 NP만 제외하고 P 학점은 정상 취득 학점으로 포함)
       const validGrades = data.grades.filter(g => g.grade !== 'F' && g.grade !== 'NP');
       const curTotal = validGrades.reduce((s, g) => s + Number(g.credit), 0) + (data.gradGoal.prevEarned || 0);
       const curMajor = validGrades.filter(g => g.type === '전공').reduce((s, g) => s + Number(g.credit), 0) + (data.gradGoal.prevMajor || 0);
