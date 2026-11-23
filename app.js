@@ -20,6 +20,7 @@ const SEMESTERS = [
 // 신규 가입 사용자용 깨끗한 초기 데이터 (완전 빈 상태)
 const defaultData = {
   darkMode: false,
+  themeMode: 'ocean',
   selectedSemester: '1학년 1학기',
   subjects: [],
   tasks: [],
@@ -39,6 +40,7 @@ const defaultData = {
 // 체험 계정(guest) 전용 샘플 데이터
 const guestDemoData = {
   darkMode: false,
+  themeMode: 'ocean',
   selectedSemester: '1학년 1학기',
   subjects: [
     { id: 's1', name: '웹프로그래밍', prof: '김교수', credit: 3, type: '전공' },
@@ -425,8 +427,7 @@ function initCommonUI(activePage) {
     statusInitial = `💻 로컬 계정 모드 · 로그인 계정: ${session.userName} (${session.userId})`;
   }
 
-  const curMode = data.themeMode || (data.darkMode ? 'dark' : 'light');
-  const themeBtnLabel = curMode === 'light' ? '🌙 다크' : (curMode === 'dark' ? '🌊 바다' : '☀️ 라이트');
+  const curMode = data.themeMode || (data.darkMode ? 'dark' : 'ocean');
 
   const headerHTML = `
     <div class="nav-container">
@@ -440,7 +441,11 @@ function initCommonUI(activePage) {
         <a href="tools.html" class="${activePage === 'tools' ? 'active' : ''}">시간표·백업</a>
       </nav>
       <div class="nav-actions">
-        <button id="darkModeBtn" class="btn btn-outline btn-sm">${themeBtnLabel}</button>
+        <select id="themeSelect" class="theme-select" aria-label="테마 선택">
+          <option value="light" ${curMode === 'light' ? 'selected' : ''}>☀️ 라이트 모드</option>
+          <option value="dark" ${curMode === 'dark' ? 'selected' : ''}>🌙 다크 모드</option>
+          <option value="ocean" ${curMode === 'ocean' ? 'selected' : ''}>🌊 바다 모드</option>
+        </select>
         <button onclick="logoutUser()" class="btn btn-danger btn-sm">로그아웃</button>
       </div>
     </div>
@@ -457,17 +462,15 @@ function initCommonUI(activePage) {
   const headerEl = document.getElementById('main-header');
   if (headerEl) {
     headerEl.innerHTML = headerHTML;
-    document.getElementById('darkModeBtn').addEventListener('click', () => {
+    document.getElementById('themeSelect').addEventListener('change', (e) => {
+      const next = e.target.value;
       const current = loadData();
-      const prev = current.themeMode || (current.darkMode ? 'dark' : 'light');
-      const next = prev === 'light' ? 'dark' : (prev === 'dark' ? 'ocean' : 'light');
       current.themeMode = next;
       current.darkMode = (next === 'dark');
       saveData(current);
       document.body.classList.remove('dark-mode', 'ocean-mode');
       if (next === 'dark') document.body.classList.add('dark-mode');
       if (next === 'ocean') document.body.classList.add('ocean-mode');
-      document.getElementById('darkModeBtn').textContent = next === 'light' ? '🌙 다크' : (next === 'dark' ? '🌊 바다' : '☀️ 라이트');
     });
   }
 }

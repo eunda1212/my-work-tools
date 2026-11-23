@@ -532,53 +532,141 @@ table.timetable th {
   font-size: 0.9rem;
 }
 
+.theme-select {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--primary);
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.theme-select:hover {
+  background-color: var(--primary-soft);
+}
+
+/* ==========================================
+   🌊 바다 모드 (Ocean Mode)
+   팔레트: #93B2E6 (오션블루), #66E2FE (아쿠아시안), #FFE293 (샌드옐로우), #F5F0F6 (라벤더화이트)
+   ========================================== */
 body.ocean-mode {
   --bg-color: #F5F0F6;
   --card-bg: #ffffff;
-  --text-main: #24344d;
-  --text-sub: #54698d;
+  --text-main: #1e2f4d;
+  --text-sub: #4f678f;
   --primary: #93B2E6;
-  --primary-soft: #e6f7fc;
+  --primary-soft: rgba(102, 226, 254, 0.22);
   --accent-mint: #66E2FE;
-  --accent-coral: #e06d78;
+  --accent-coral: #e56b78;
   --accent-yellow: #FFE293;
-  --border-color: #d6e4f5;
-  --shadow: 0 4px 16px rgba(147, 178, 230, 0.2);
+  --border-color: #b8d8f8;
+  --shadow: 0 6px 18px rgba(102, 226, 254, 0.22);
 }
 
-body.ocean-mode .btn {
-  background-color: #93B2E6;
-  color: #1c2b45;
+body.ocean-mode header {
+  background: linear-gradient(90deg, #ffffff 0%, #eefaff 100%);
+  border-bottom: 2px solid #66E2FE;
+}
+
+body.ocean-mode .logo {
+  color: #2c67b8;
+  text-shadow: 0 1px 0 #66E2FE;
+}
+
+body.ocean-mode .nav-links a.active,
+body.ocean-mode .nav-links a:hover {
+  background-color: #66E2FE;
+  color: #102a45;
   font-weight: 700;
 }
 
+body.ocean-mode .sync-bar {
+  background: linear-gradient(90deg, rgba(102, 226, 254, 0.35), rgba(147, 178, 230, 0.35), rgba(255, 226, 147, 0.35));
+  border-bottom: 1px solid #93B2E6;
+}
+
+body.ocean-mode .card {
+  border: 1.5px solid #c5e3fa;
+  border-top: 4px solid #66E2FE;
+}
+
+body.ocean-mode .card-link:hover {
+  border-color: #66E2FE;
+  box-shadow: 0 8px 22px rgba(102, 226, 254, 0.35);
+}
+
+body.ocean-mode .stat-big {
+  color: #2f6ec4;
+}
+
+body.ocean-mode .btn {
+  background: linear-gradient(135deg, #66E2FE 0%, #93B2E6 100%);
+  color: #10253f;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(102, 226, 254, 0.35);
+}
+
 body.ocean-mode .btn-outline {
-  background-color: #F5F0F6;
-  border-color: #93B2E6;
-  color: #24344d;
+  background: #F5F0F6;
+  border: 1.5px solid #66E2FE;
+  color: #1e2f4d;
+  box-shadow: none;
 }
 
 body.ocean-mode .badge {
   background-color: #66E2FE;
-  color: #14283d;
+  color: #0e263d;
+  border: 1px solid #48cbe8;
 }
 
 body.ocean-mode .badge-urgent {
   background-color: #FFE293;
-  color: #4a3700;
+  color: #4d3800;
+  border: 1px solid #f0c95d;
+}
+
+body.ocean-mode .badge-done {
+  background-color: #93B2E6;
+  color: #10253f;
+}
+
+body.ocean-mode .progress-wrap {
+  background-color: #F5F0F6;
+  border-color: #93B2E6;
 }
 
 body.ocean-mode .progress-fill {
-  background: linear-gradient(90deg, #93B2E6, #66E2FE, #FFE293);
+  background: linear-gradient(90deg, #93B2E6 0%, #66E2FE 55%, #FFE293 100%);
+}
+
+body.ocean-mode table.timetable th {
+  background-color: #66E2FE;
+  color: #10253f;
 }
 
 body.ocean-mode .tt-filled {
-  background-color: #93B2E6;
-  color: #162540;
+  background: linear-gradient(135deg, #93B2E6, #66E2FE);
+  color: #10253f;
+  font-weight: 700;
 }
 
 body.ocean-mode .folder-tab.active {
-  background-color: #93B2E6;
-  color: #162540;
+  background: linear-gradient(135deg, #66E2FE, #93B2E6);
+  color: #10253f;
+  border-color: #66E2FE;
+}
+
+body.ocean-mode .member-chip {
+  background-color: #FFE293;
+  color: #3d2c00;
+}
+
+body.ocean-mode .theme-select {
+  background-color: #66E2FE;
   border-color: #93B2E6;
+  color: #10253f;
 }
