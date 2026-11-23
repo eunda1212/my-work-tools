@@ -1,9 +1,13 @@
-// CAMPUS MATE 인증(ID/PW) 및 Google Apps Script 온라인 DB 관리 엔진
+// CAMPUS MATE 인증(ID/PW) 및 다중 팀플(ID 초대/공유) 엔진
 const SESSION_KEY = 'campus_mate_session';
 const USERS_LOCAL_KEY = 'campus_mate_local_users';
+const SHARED_TEAMS_KEY = 'campus_mate_shared_teams';
+const ADMIN_GAS_KEY = 'campus_mate_admin_gas_url';
 
-// ★ 아래 따옴표 안에 본인의 순수 Google Apps Script 웹 앱 URL(https://.../exec)을 붙여넣으세요!
+// ★ 기본 서버 URL (관리자 모드에서 변경 시 브라우저에 저장되어 우선 적용됨)
 const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
+// ★ 관리자 모드 진입 PIN 번호 (원하는 비밀번호로 변경 가능)
+const ADMIN_PIN = '11292612';
 
 const defaultData = {
   darkMode: false,
@@ -27,14 +31,6 @@ const defaultData = {
   ],
   targetGpa: 4.0,
   gradGoal: { total: 130, major: 65, liberal: 35, prevEarned: 60, prevMajor: 30, prevLiberal: 20 },
-  teamTasks: [
-    { id: 'k1', member: '팀장', task: '메인 UI 및 스토리보드 설계', status: 'done' },
-    { id: 'k2', member: '팀원A', task: '캘린더 및 타이머 JS 구현', status: 'doing' },
-    { id: 'k3', member: '팀원B', task: '최종 발표 PPT 제작', status: 'todo' }
-  ],
-  meetings: [
-    { id: 'm1', date: '2026-11-20', members: '팀장, 팀원A, 팀원B', note: '주제를 CAMPUS MATE로 확정하고 6개 페이지 역할 분담 완료.' }
-  ],
   timetable: [
     { day: '월', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
     { day: '수', period: 2, subject: '웹프로그래밍', room: '공학관 302' },
@@ -43,9 +39,51 @@ const defaultData = {
 };
 
 function getGasUrl() {
+  const adminSaved = localStorage.getItem(ADMIN_GAS_KEY);
+  if (adminSaved && adminSaved.trim()) return adminSaved.trim();
   if (!DEFAULT_GAS_URL || DEFAULT_GAS_URL === '여기에_순수_웹앱_URL_붙여넣기') return '';
   return DEFAULT_GAS_URL.trim();
 }
+
+function setAdminGasUrl(url) {
+  const clean = url.trim();
+  if (!clean) {
+    localStorage.removeItem(ADMIN_GAS_KEY);
+  } else {
+    localStorage.setItem(ADMIN_GAS_KEY, clean);
+  }
+}
+
+// 숨김 관리자 모달 열기 (PIN 검증 후 서버 URL 설정 창 표시)
+function triggerAdminMode() {
+  const pin = prompt('관리자 비밀번호를 입력하세요:');
+  if (pin === null) return;
+  if (pin !== ADMIN_PIN) {
+    alert('관리자 비밀번호가 일치하지 않습니다.');
+    return;
+  }
+  const currentUrl = getGasUrl();
+  const nextUrl = prompt(
+    '✅ 관리자 인증 완료!\n연결할 Google Apps Script 웹 앱 URL(https://.../exec)을 입력하세요.\n(비우고 확인을 누르면 기본 설정으로 초기화됩니다)',
+    currentUrl
+  );
+  if (nextUrl === null) return;
+  if (nextUrl.trim().startsWith('{')) {
+    alert('⚠️ JSON 전체가 아닌 순수 https://.../exec 주소만 입력해 주세요!');
+    return;
+  }
+  setAdminGasUrl(nextUrl);
+  alert('서버 URL 설정이 반영되었습니다. 페이지를 새로고침합니다.');
+  location.reload();
+}
+
+// 단축키(Ctrl + Shift + A)로도 언제든 관리자 모드 호출 가능
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+    e.preventDefault();
+    triggerAdminMode();
+  }
+});
 
 function getSession() {
   const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
@@ -81,6 +119,8 @@ function getLocalUsers() {
   const raw = localStorage.getItem(USERS_LOCAL_KEY);
   const base = raw ? JSON.parse(raw) : {};
   base['guest'] = { password: '1234', userName: '체험사용자' };
+  base['student1'] = { password: '1234', userName: '김민수' };
+  base['student2'] = { password: '1234', userName: '박지훈' };
   localStorage.setItem(USERS_LOCAL_KEY, JSON.stringify(base));
   return base;
 }
@@ -113,7 +153,6 @@ function saveData(data) {
   const uid = session.userId;
   localStorage.setItem(getUserStorageKey(uid), JSON.stringify(data));
 
-  // 체험 계정(guest)은 공용 데이터 오염 방지를 위해 로컬 저장만 수행
   if (uid === 'guest') {
     setSyncStatus('🧪 체험 모드 (브라우저 임시 저장)');
     return;
@@ -137,6 +176,161 @@ function saveData(data) {
   }
 }
 
+// ==========================================
+// 다중 팀 프로젝트(폴더) & 팀원 ID 초대 관리 함수
+// ==========================================
+function getDefaultTeams(session) {
+  return [
+    {
+      id: 'team_demo_1',
+      name: '웹프로그래밍 기말 프로젝트',
+      subject: '웹프로그래밍',
+      ownerId: session.userId,
+      members: [
+        { userId: session.userId, userName: session.userName },
+        { userId: 'student1', userName: '김민수' }
+      ],
+      tasks: [
+        { id: 'k1', memberId: session.userId, memberName: session.userName, task: '메인 UI 및 스토리보드 설계', status: 'done' },
+        { id: 'k2', memberId: 'student1', memberName: '김민수', task: '캘린더 및 타이머 JS 구현', status: 'doing' }
+      ],
+      meetings: [
+        { id: 'm1', date: '2026-11-20', members: `${session.userName}, 김민수`, note: '주제를 CAMPUS MATE로 확정하고 역할 분담 완료.' }
+      ]
+    },
+    {
+      id: 'team_demo_2',
+      name: '컴퓨터개론 발표조',
+      subject: '컴퓨터개론',
+      ownerId: session.userId,
+      members: [
+        { userId: session.userId, userName: session.userName },
+        { userId: 'student2', userName: '박지훈' }
+      ],
+      tasks: [
+        { id: 'k3', memberId: 'student2', memberName: '박지훈', task: '자료 조사 및 발표 PPT 초안', status: 'todo' }
+      ],
+      meetings: []
+    }
+  ];
+}
+
+function getAllLocalTeams() {
+  const raw = localStorage.getItem(SHARED_TEAMS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function setAllLocalTeams(teams) {
+  localStorage.setItem(SHARED_TEAMS_KEY, JSON.stringify(teams));
+}
+
+// 현재 로그인한 사용자가 속한 팀 폴더 목록 반환
+function getMyTeams() {
+  const session = getSession();
+  if (!session) return [];
+  let all = getAllLocalTeams();
+  if (all.length === 0) {
+    all = getDefaultTeams(session);
+    setAllLocalTeams(all);
+  }
+  return all.filter(team => (team.members || []).some(m => m.userId === session.userId));
+}
+
+// 특정 팀 저장 (로컬 공용 저장소 + 구글 시트 CampusMateTeams 동시 반영)
+async function saveTeamProject(teamObj) {
+  const session = getSession();
+  let all = getAllLocalTeams();
+  const idx = all.findIndex(t => t.id === teamObj.id);
+  if (idx >= 0) {
+    all[idx] = teamObj;
+  } else {
+    all.push(teamObj);
+  }
+  setAllLocalTeams(all);
+
+  const gasUrl = getGasUrl();
+  if (gasUrl && session && session.userId !== 'guest') {
+    setSyncStatus('☁️ 팀 프로젝트 서버 동기화 중...');
+    try {
+      await fetch(gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveTeam',
+          team: teamObj
+        })
+      });
+      setSyncStatus('✅ 팀플 보드 클라우드 동기화 완료');
+    } catch (e) {
+      setSyncStatus('⚠️ 팀플 서버 동기화 지연 (로컬 저장됨)');
+    }
+  }
+}
+
+async function deleteTeamProject(teamId) {
+  const session = getSession();
+  let all = getAllLocalTeams().filter(t => t.id !== teamId);
+  setAllLocalTeams(all);
+
+  const gasUrl = getGasUrl();
+  if (gasUrl && session && session.userId !== 'guest') {
+    try {
+      await fetch(gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteTeam',
+          teamId: teamId
+        })
+      });
+    } catch (e) {}
+  }
+}
+
+// 구글 시트에서 내가 초대된 팀 목록 최신화
+async function syncMyTeamsFromCloud() {
+  const session = getSession();
+  const gasUrl = getGasUrl();
+  if (!session || session.userId === 'guest' || !gasUrl) return getMyTeams();
+
+  try {
+    const res = await fetch(`${gasUrl}?action=getTeams&userId=${encodeURIComponent(session.userId)}`);
+    const json = await res.json();
+    if (json.status === 'ok' && Array.isArray(json.teams)) {
+      let all = getAllLocalTeams();
+      // 서버에서 받아온 내 팀 목록으로 병합 갱신
+      const serverIds = new Set(json.teams.map(t => t.id));
+      all = all.filter(t => !serverIds.has(t.id)).concat(json.teams);
+      setAllLocalTeams(all);
+      return json.teams;
+    }
+  } catch (e) {}
+  return getMyTeams();
+}
+
+// 계정 ID로 사용자 검색 (팀원 초대용)
+async function lookupUserById(targetId) {
+  const cleanId = targetId.trim();
+  if (!cleanId) return null;
+
+  const gasUrl = getGasUrl();
+  if (gasUrl) {
+    try {
+      const res = await fetch(`${gasUrl}?action=checkUser&userId=${encodeURIComponent(cleanId)}`);
+      const json = await res.json();
+      if (json.status === 'ok') {
+        return { userId: json.userId, userName: json.userName };
+      }
+    } catch (e) {}
+  }
+
+  const localUsers = getLocalUsers();
+  if (localUsers[cleanId]) {
+    return { userId: cleanId, userName: localUsers[cleanId].userName };
+  }
+  return null;
+}
+
 async function pullFromCloud() {
   const session = getSession();
   const gasUrl = getGasUrl();
@@ -154,11 +348,10 @@ async function pullFromCloud() {
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       localStorage.setItem(getUserStorageKey(session.userId), JSON.stringify(json.data));
-      setSyncStatus('✅ 클라우드 데이터 동기화 완료');
-      location.reload();
-    } else {
-      alert('서버에 저장된 데이터가 아직 없습니다.');
     }
+    await syncMyTeamsFromCloud();
+    setSyncStatus('✅ 클라우드 데이터 동기화 완료');
+    location.reload();
   } catch (err) {
     alert('데이터 동기화 중 오류가 발생했습니다.');
   }
@@ -185,7 +378,7 @@ function initCommonUI(activePage) {
 
   let statusInitial = '';
   if (session.userId === 'guest') {
-    statusInitial = '🧪 체험 계정 모드 (guest) · 개인 데이터 영구 저장은 회원가입 후 이용하세요';
+    statusInitial = '🧪 체험 계정 모드 (guest) · 테스트용 팀원 ID: student1, student2';
   } else if (gasUrl) {
     statusInitial = `☁️ 온라인 DB 자동 연결됨 · 로그인 계정: ${session.userName} (${session.userId})`;
   } else {
@@ -194,7 +387,7 @@ function initCommonUI(activePage) {
 
   const headerHTML = `
     <div class="nav-container">
-      <a href="index.html" class="logo">🎓 CAMPUS MATE</a>
+      <a href="index.html" class="logo" ondblclick="event.preventDefault(); triggerAdminMode();">🎓 CAMPUS MATE</a>
       <nav class="nav-links">
         <a href="index.html" class="${activePage === 'index' ? 'active' : ''}">대시보드</a>
         <a href="schedule.html" class="${activePage === 'schedule' ? 'active' : ''}">과제·캘린더</a>

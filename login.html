@@ -9,16 +9,14 @@
 <body>
   <div class="login-wrapper">
     <div class="login-card">
-      <div class="login-logo">🎓 CAMPUS MATE</div>
+      <div class="login-logo" style="user-select:none;" ondblclick="triggerAdminMode()">🎓 CAMPUS MATE</div>
       <p class="login-sub">대학생을 위한 통합 학업 관리 대시보드</p>
 
-      <!-- 로그인 / 회원가입 탭 -->
       <div class="auth-tabs">
         <button type="button" id="tabLogin" class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
         <button type="button" id="tabRegister" class="auth-tab" onclick="switchAuthTab('register')">회원가입</button>
       </div>
 
-      <!-- 로그인 폼 -->
       <form id="loginForm">
         <div class="input-group">
           <label for="loginId">아이디 (학번)</label>
@@ -39,7 +37,6 @@
         </button>
       </form>
 
-      <!-- 회원가입 폼 -->
       <form id="registerForm" style="display:none;">
         <div class="input-group">
           <label for="regName">이름 (닉네임)</label>
@@ -61,17 +58,6 @@
           회원가입 완료 및 시작하기
         </button>
       </form>
-
-      <!-- 구글 시트 서버 URL 설정 토글 -->
-      <div style="margin-top:20px; padding-top:14px; border-top:1px solid var(--border-color); text-align:center;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="toggleServerBox()">
-          ☁️ 구글 시트 서버 URL 연결 설정
-        </button>
-        <div id="serverConfigBox" style="display:none; margin-top:10px; text-align:left;">
-          <input type="url" id="loginGasUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%; margin-bottom:6px; font-size:0.82rem;" />
-          <button type="button" class="btn btn-sm" style="width:100%;" onclick="saveLoginGasUrl()">서버 URL 저장</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -79,19 +65,6 @@
   <script>
     if (getSession()) {
       location.href = 'index.html';
-    }
-
-    document.getElementById('loginGasUrl').value = getGasUrl();
-
-    function toggleServerBox() {
-      const box = document.getElementById('serverConfigBox');
-      box.style.display = box.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function saveLoginGasUrl() {
-      const url = document.getElementById('loginGasUrl').value;
-      setGasUrl(url);
-      alert('Google Apps Script 서버 주소가 저장되었습니다.');
     }
 
     function switchAuthTab(mode) {
@@ -107,11 +80,17 @@
       const password = document.getElementById('loginPw').value.trim();
       const remember = document.getElementById('rememberMe').checked;
       const btn = document.getElementById('loginSubmitBtn');
-      const gasUrl = getGasUrl();
 
+      if (userId === 'guest' && password === '1234') {
+        setSession({ userId: 'guest', userName: '체험사용자' }, remember);
+        location.href = 'index.html';
+        return;
+      }
+
+      const gasUrl = getGasUrl();
       if (gasUrl) {
         btn.disabled = true;
-        btn.textContent = '구글 시트 계정 확인 중...';
+        btn.textContent = '계정 정보 확인 중...';
         try {
           const res = await fetch(`${gasUrl}?action=login&userId=${encodeURIComponent(userId)}&password=${encodeURIComponent(password)}`);
           const json = await res.json();
@@ -129,7 +108,7 @@
             return;
           }
         } catch (err) {
-          alert('서버 연결에 실패했습니다. URL 설정을 확인해 주세요.');
+          alert('서버 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
           btn.disabled = false;
           btn.textContent = '로그인하기';
           return;
@@ -141,7 +120,7 @@
         setSession({ userId, userName: users[userId].userName }, remember);
         location.href = 'index.html';
       } else {
-        alert('아이디 또는 비밀번호가 일치하지 않습니다. (체험 계정: guest / 1234 또는 회원가입 이용)');
+        alert('아이디 또는 비밀번호가 일치하지 않습니다.');
       }
     });
 
@@ -153,6 +132,10 @@
       const pwConfirm = document.getElementById('regPwConfirm').value.trim();
       const btn = document.getElementById('regSubmitBtn');
 
+      if (['guest', 'student1', 'student2'].includes(userId.toLowerCase())) {
+        alert('체험용 공용 아이디입니다. 다른 아이디를 입력해 주세요.');
+        return;
+      }
       if (password !== pwConfirm) {
         alert('비밀번호 확인이 일치하지 않습니다.');
         return;
@@ -163,7 +146,7 @@
 
       if (gasUrl) {
         btn.disabled = true;
-        btn.textContent = '구글 시트에 계정 생성 중...';
+        btn.textContent = '계정 생성 중...';
         try {
           const res = await fetch(gasUrl, {
             method: 'POST',

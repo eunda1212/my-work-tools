@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>시간표 & 온라인 DB 설정 - CAMPUS MATE</title>
+  <title>시간표 & 데이터 백업 - CAMPUS MATE</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>🛠️ 주간 강의 시간표 빌더 & Google Apps Script DB 설정</h1>
-      <p>주간 시간표를 구성하고, 구글 스프레드시트 웹 앱 URL을 연결하여 계정별 온라인 동기화를 관리하세요.</p>
+      <h1>🛠️ 주간 강의 시간표 빌더 & 데이터 백업</h1>
+      <p>주간 강의 시간표를 구성하고, 개인 학습 데이터를 JSON 파일로 백업하거나 복원하세요.</p>
     </div>
 
     <div class="grid-2">
@@ -45,25 +45,19 @@
       </section>
 
       <section class="card">
-        <div class="card-title">☁️ Google Apps Script 온라인 DB 연동</div>
+        <div class="card-title">☁️ 계정 데이터 동기화 및 로컬 백업</div>
         <p style="font-size:0.88rem; color:var(--text-sub); margin-bottom:14px;">
-          구글 스프레드시트에서 배포한 <strong>Apps Script 웹 앱 URL</strong>을 연결하면, 로그인한 ID/PW 계정별로 구글 시트에 데이터가 저장됩니다.
+          로그인된 계정의 모든 학습 기록과 팀플 폴더는 자동으로 클라우드 서버와 동기화됩니다. 필요 시 JSON 파일로 별도 백업할 수 있습니다.
         </p>
 
-        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
-          <label style="font-size:0.85rem; font-weight:700;">Apps Script 웹 앱 URL</label>
-          <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;" />
-
-          <div class="form-row" style="margin-top:4px;">
-            <button class="btn" onclick="saveCloudSettings()">💾 서버 URL 저장</button>
-            <button class="btn btn-outline" onclick="pushNowToCloud()">⬆️ 현재 데이터 시트로 전송</button>
-            <button class="btn btn-outline" onclick="pullFromCloud()">⬇️ 시트에서 불러오기</button>
-          </div>
+        <div class="form-row" style="margin-bottom:18px;">
+          <button class="btn" onclick="pushNowToCloud()">⬆️ 서버에 수동 백업</button>
+          <button class="btn btn-outline" onclick="pullFromCloud()">⬇️ 서버에서 불러오기</button>
         </div>
 
         <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;" />
 
-        <div class="card-title" style="font-size:0.98rem;">📁 로컬 JSON 파일 백업</div>
+        <div class="card-title" style="font-size:0.98rem;">📁 로컬 JSON 파일 백업 / 복원</div>
         <div class="form-row">
           <button class="btn btn-outline btn-sm" onclick="exportJSON()">⬇️ JSON 다운로드</button>
           <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" style="font-size:0.82rem;" />
@@ -77,22 +71,14 @@
   <script>
     initCommonUI('tools');
 
-    document.getElementById('gasUrlInput').value = getGasUrl();
-
-    function saveCloudSettings() {
-      const url = document.getElementById('gasUrlInput').value;
-      setGasUrl(url);
-      alert('Google Apps Script 서버 URL이 저장되었습니다!');
-      location.reload();
-    }
-
     function pushNowToCloud() {
-      if (!getGasUrl()) {
-        alert('먼저 웹 앱 URL을 입력하고 저장해 주세요.');
+      const session = getSession();
+      if (!session || session.userId === 'guest') {
+        alert('체험 계정은 서버 백업을 지원하지 않습니다. 회원가입 후 이용해 주세요.');
         return;
       }
       saveData(loadData());
-      alert('구글 스프레드시트로 현재 계정 데이터를 전송했습니다!');
+      alert('서버로 현재 계정 데이터를 안전하게 백업했습니다!');
     }
 
     function populateSubjects() {

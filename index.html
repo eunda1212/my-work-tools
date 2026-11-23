@@ -95,7 +95,7 @@
       document.getElementById('dash-gpa').textContent = gpa.toFixed(2);
       document.getElementById('dash-gpa-goal').textContent = `목표 평점: ${Number(data.targetGpa).toFixed(2)} / 4.5`;
 
-      const activeTeam = data.teamTasks.filter(t => t.status !== 'done').length;
+      const myTeams = getMyTeams(); const activeTeam = myTeams.reduce((sum, tm) => sum + (tm.tasks || []).filter(t => t.status !== 'done').length, 0);
       document.getElementById('dash-team-count').textContent = `${activeTeam}건`;
 
       const subList = document.getElementById('subjectList');
