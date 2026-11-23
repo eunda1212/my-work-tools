@@ -1,10 +1,9 @@
 // CAMPUS MATE 인증(ID/PW) 및 Google Apps Script 온라인 DB 관리 엔진
 const SESSION_KEY = 'campus_mate_session';
 const USERS_LOCAL_KEY = 'campus_mate_local_users';
-const GAS_CONFIG_KEY = 'campus_mate_gas_config';
 
-// 구글 앱스 스크립트 배포 후 발급받은 웹 앱 URL을 아래 따옴표 안에 넣으면 모든 기기에서 기본으로 연결됨
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzJ23bWjBf4qMg10xknmzK1dHFRe-T6JrgwlYqXhLPS5zUf4MKTDqP0uyP7jHaaxhSlzg/exec';
+// ★ 아래 따옴표 안에 본인의 순수 Google Apps Script 웹 앱 URL(https://.../exec)을 붙여넣으세요!
+const DEFAULT_GAS_URL = '여기에_순수_웹앱_URL_붙여넣기';
 
 const defaultData = {
   darkMode: false,
@@ -44,12 +43,8 @@ const defaultData = {
 };
 
 function getGasUrl() {
-  const saved = localStorage.getItem(GAS_CONFIG_KEY);
-  return (saved && saved.trim()) ? saved.trim() : DEFAULT_GAS_URL;
-}
-
-function setGasUrl(url) {
-  localStorage.setItem(GAS_CONFIG_KEY, url.trim());
+  if (!DEFAULT_GAS_URL || DEFAULT_GAS_URL === '여기에_순수_웹앱_URL_붙여넣기') return '';
+  return DEFAULT_GAS_URL.trim();
 }
 
 function getSession() {
@@ -84,15 +79,10 @@ function getUserStorageKey(userId) {
 
 function getLocalUsers() {
   const raw = localStorage.getItem(USERS_LOCAL_KEY);
-  if (!raw) {
-    // 범용 체험 계정 세팅
-    const initial = {
-      'guest': { password: '1234', userName: '체험사용자' }
-    };
-    localStorage.setItem(USERS_LOCAL_KEY, JSON.stringify(initial));
-    return initial;
-  }
-  return JSON.parse(raw);
+  const base = raw ? JSON.parse(raw) : {};
+  base['guest'] = { password: '1234', userName: '체험사용자' };
+  localStorage.setItem(USERS_LOCAL_KEY, JSON.stringify(base));
+  return base;
 }
 
 function loadData() {
@@ -123,9 +113,15 @@ function saveData(data) {
   const uid = session.userId;
   localStorage.setItem(getUserStorageKey(uid), JSON.stringify(data));
 
+  // 체험 계정(guest)은 공용 데이터 오염 방지를 위해 로컬 저장만 수행
+  if (uid === 'guest') {
+    setSyncStatus('🧪 체험 모드 (브라우저 임시 저장)');
+    return;
+  }
+
   const gasUrl = getGasUrl();
   if (gasUrl) {
-    setSyncStatus('☁️ 구글 시트 온라인 저장 중...');
+    setSyncStatus('☁️ 클라우드 동기화 중...');
     fetch(gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -137,19 +133,22 @@ function saveData(data) {
     })
       .then(res => res.json())
       .then(() => setSyncStatus(`✅ 온라인 DB 동기화 완료 (${session.userName}님)`))
-      .catch(() => setSyncStatus('⚠️ 온라인 동기화 실패 (브라우저 로컬 저장됨)'));
+      .catch(() => setSyncStatus('⚠️ 서버 동기화 지연 (로컬 백업 완료)'));
   }
 }
 
 async function pullFromCloud() {
   const session = getSession();
   const gasUrl = getGasUrl();
-  if (!session) return;
-  if (!gasUrl) {
-    alert('먼저 [시간표·백업] 페이지에서 Google Apps Script 웹 앱 URL을 연결해 주세요.');
+  if (!session || session.userId === 'guest') {
+    alert('체험 계정은 로컬 전용 모드입니다. 개인 계정으로 로그인 후 이용해 주세요.');
     return;
   }
-  setSyncStatus('☁️ 구글 시트에서 최신 데이터 불러오는 중...');
+  if (!gasUrl) {
+    alert('서버가 연결되어 있지 않습니다.');
+    return;
+  }
+  setSyncStatus('☁️ 최신 데이터 불러오는 중...');
   try {
     const res = await fetch(`${gasUrl}?action=fetch&userId=${encodeURIComponent(session.userId)}`);
     const json = await res.json();
@@ -158,10 +157,10 @@ async function pullFromCloud() {
       setSyncStatus('✅ 클라우드 데이터 동기화 완료');
       location.reload();
     } else {
-      alert('서버에 저장된 데이터가 아직 없습니다. 데이터를 변경하면 자동으로 저장됩니다.');
+      alert('서버에 저장된 데이터가 아직 없습니다.');
     }
   } catch (err) {
-    alert('구글 시트 동기화 중 오류가 발생했습니다.');
+    alert('데이터 동기화 중 오류가 발생했습니다.');
   }
 }
 
@@ -184,9 +183,14 @@ function initCommonUI(activePage) {
   const gasUrl = getGasUrl();
   if (data.darkMode) document.body.classList.add('dark-mode');
 
-  const statusInitial = gasUrl
-    ? `☁️ 구글 시트 온라인 DB 연결됨 · 로그인 계정: ${session.userName} (${session.userId})`
-    : `💻 브라우저 로컬 계정 모드 · 로그인 계정: ${session.userName} (${session.userId})`;
+  let statusInitial = '';
+  if (session.userId === 'guest') {
+    statusInitial = '🧪 체험 계정 모드 (guest) · 개인 데이터 영구 저장은 회원가입 후 이용하세요';
+  } else if (gasUrl) {
+    statusInitial = `☁️ 온라인 DB 자동 연결됨 · 로그인 계정: ${session.userName} (${session.userId})`;
+  } else {
+    statusInitial = `💻 로컬 계정 모드 · 로그인 계정: ${session.userName} (${session.userId})`;
+  }
 
   const headerHTML = `
     <div class="nav-container">
