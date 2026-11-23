@@ -125,6 +125,7 @@
       const data = loadData();
       data.selectedSemester = val;
       saveData(data);
+      populateSubjects();
       renderTimetable();
     }
 
@@ -143,8 +144,11 @@
 
     function populateSubjects() {
       const data = loadData();
+      const currentSem = document.getElementById('ttSemesterSelect').value;
       const dl = document.getElementById('ttSubjectOptions');
-      dl.innerHTML = data.subjects.map(s => `<option value="${s.name}">`).join('');
+      const semSubs = data.subjects.filter(s => (s.semester || '1학년 1학기') === currentSem);
+      const list = semSubs.length > 0 ? semSubs : data.subjects;
+      dl.innerHTML = list.map(s => `<option value="${s.name}">`).join('');
     }
 
     function populatePeriodSelects() {

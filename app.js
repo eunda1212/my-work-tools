@@ -14,7 +14,7 @@ const SEMESTERS = [
   '2학년 1학기', '2학년 2학기',
   '3학년 1학기', '3학년 2학기',
   '4학년 1학기', '4학년 2학기',
-  '계절학기'
+  '여름 계절학기', '겨울 계절학기'
 ];
 
 // 신규 가입 사용자용 깨끗한 초기 데이터 (완전 빈 상태)
@@ -43,9 +43,9 @@ const guestDemoData = {
   themeMode: 'ocean',
   selectedSemester: '1학년 1학기',
   subjects: [
-    { id: 's1', name: '웹프로그래밍', prof: '김교수', credit: 3, type: '전공' },
-    { id: 's2', name: '컴퓨터개론', prof: '이교수', credit: 3, type: '전공' },
-    { id: 's3', name: '대학영어', prof: '박교수', credit: 2, type: '교양' }
+    { id: 's1', semester: '1학년 1학기', name: '웹프로그래밍', prof: '김교수', credit: 3, type: '전공' },
+    { id: 's2', semester: '1학년 1학기', name: '컴퓨터개론', prof: '이교수', credit: 3, type: '전공' },
+    { id: 's3', semester: '1학년 1학기', name: '대학영어', prof: '박교수', credit: 2, type: '교양' }
   ],
   tasks: [
     { id: 't1', subject: '웹프로그래밍', title: '스토리보드 및 프로토타입 제출', due: '2026-11-26', tag: '과제', done: false },
@@ -176,6 +176,7 @@ function loadData() {
     const parsed = JSON.parse(raw);
     const merged = { ...defaultData, ...parsed };
     merged.timetableConfig = { ...defaultData.timetableConfig, ...(parsed.timetableConfig || {}) };
+    merged.subjects = (merged.subjects || []).map(s => ({ semester: merged.selectedSemester || '1학년 1학기', ...s }));
     merged.grades = (merged.grades || []).map(g => ({ semester: merged.selectedSemester || '1학년 1학기', ...g }));
     merged.timetable = (merged.timetable || []).map(t => ({ semester: merged.selectedSemester || '1학년 1학기', ...t }));
     return merged;

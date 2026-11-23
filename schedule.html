@@ -11,21 +11,24 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>📅 과제·시험 D-Day & 월간 캘린더</h1>
-      <p>일정을 등록하고 리스트 뷰와 캘린더 뷰를 자유롭게 전환하며 마감일을 관리하세요.</p>
+      <h1>📅 과제·시험·일반 일정 D-Day & 월간 캘린더</h1>
+      <p>과제·시험뿐 아니라 동아리, 약속, 개인 일정 등 일반 일정도 등록하고 리스트 뷰와 캘린더 뷰로 한눈에 관리하세요.</p>
     </div>
 
     <section class="card" style="margin-bottom:20px;">
-      <div class="card-title">새 과제·시험 등록</div>
+      <div class="card-title">새 일정 등록 (과제·시험 / 일반 일정)</div>
       <form id="taskForm" class="form-row">
         <select id="taskSubject" required></select>
         <select id="taskTag">
+          <option value="일반">일반 일정</option>
           <option value="과제">과제</option>
           <option value="시험">시험</option>
           <option value="팀플">팀플</option>
           <option value="퀴즈">퀴즈</option>
+          <option value="동아리·행사">동아리·행사</option>
+          <option value="개인약속">개인약속</option>
         </select>
-        <input type="text" id="taskTitle" placeholder="할 일 내용 입력" required style="flex:2;" />
+        <input type="text" id="taskTitle" placeholder="일정 또는 할 일 내용 입력" required style="flex:2;" />
         <input type="date" id="taskDue" required />
         <button type="submit" class="btn">일정 추가</button>
       </form>
@@ -66,8 +69,9 @@
       const data = loadData();
       const sel = document.getElementById('taskSubject');
       const filter = document.getElementById('filterSubject');
-      sel.innerHTML = data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('') || '<option value="기타">기타</option>';
-      filter.innerHTML = '<option value="ALL">전체 과목 보기</option>' +
+      const subOptions = data.subjects.map(s => `<option value="${s.name}">[${s.semester || '1학년 1학기'}] ${s.name}</option>`).join('');
+      sel.innerHTML = '<option value="일반 일정">📌 일반 일정 (과목 무관)</option>' + subOptions;
+      filter.innerHTML = '<option value="ALL">전체 일정 보기</option><option value="일반 일정">📌 일반 일정만 보기</option>' +
         data.subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
     }
 

@@ -43,10 +43,14 @@
 
     <div class="grid-2">
       <section class="card">
-        <div class="card-title">📚 내 수강 과목 등록 (전체 페이지 연동)</div>
+        <div class="card-title">
+          <span>📚 내 수강 과목 등록 (학기별 연동)</span>
+          <select id="dashSubFilter" onchange="renderDashboard()" style="padding:5px 10px; font-size:0.82rem; font-weight:700;"></select>
+        </div>
         <form id="subjectForm" class="form-row">
-          <input type="text" id="subName" placeholder="과목명 (예: 자료구조)" required style="flex:2;" />
-          <input type="text" id="subProf" placeholder="교수명" style="flex:1;" />
+          <select id="subSemester"></select>
+          <input type="text" id="subName" placeholder="과목명 (예: 자료구조)" required style="flex:2; min-width:120px;" />
+          <input type="text" id="subProf" placeholder="교수명" style="flex:1; min-width:90px;" />
           <select id="subCredit">
             <option value="3">3학점</option>
             <option value="2">2학점</option>
@@ -75,6 +79,18 @@
   <script>
     initCommonUI('index');
 
+    function initDashSemesters() {
+      const data = loadData();
+      const subSem = document.getElementById('subSemester');
+      const subFilter = document.getElementById('dashSubFilter');
+      subSem.innerHTML = SEMESTERS.map(s => `<option value="${s}">${s}</option>`).join('');
+      subSem.value = data.selectedSemester || '1학년 1학기';
+
+      subFilter.innerHTML = '<option value="ALL">전체 학기 과목</option>' +
+        SEMESTERS.map(s => `<option value="${s}">${s}</option>`).join('');
+      subFilter.value = 'ALL';
+    }
+
     function renderDashboard() {
       const session = getSession();
       if (session) {
@@ -99,17 +115,23 @@
       const activeTeam = myTeams.reduce((sum, tm) => sum + (tm.tasks || []).filter(t => t.status !== 'done').length, 0);
       document.getElementById('dash-team-count').textContent = `${activeTeam}건`;
 
+      const filterSem = document.getElementById('dashSubFilter').value;
+      const visibleSubjects = filterSem === 'ALL'
+        ? data.subjects
+        : data.subjects.filter(s => (s.semester || '1학년 1학기') === filterSem);
+
       const subList = document.getElementById('subjectList');
-      subList.innerHTML = data.subjects.map(s => `
+      subList.innerHTML = visibleSubjects.map(s => `
         <li class="list-item">
           <div>
+            <span class="badge">${s.semester || '1학년 1학기'}</span>
             <span class="badge">${s.type}</span>
             <strong>${s.name}</strong>
             <span style="color:var(--text-sub); font-size:0.85rem;">(${s.prof || '미지정'} · ${s.credit}학점)</span>
           </div>
           <button class="btn btn-danger" onclick="deleteSubject('${s.id}')">삭제</button>
         </li>
-      `).join('') || '<li class="list-item" style="color:var(--text-sub);">등록된 수강 과목이 없습니다. 위에서 첫 과목을 등록해 보세요!</li>';
+      `).join('') || '<li class="list-item" style="color:var(--text-sub);">해당 학기에 등록된 수강 과목이 없습니다. 위에서 등록해 보세요!</li>';
 
       const dashTasks = document.getElementById('dashTaskList');
       dashTasks.innerHTML = pendingTasks.slice(0, 3).map(t => `
@@ -126,25 +148,31 @@
     document.getElementById('subjectForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const data = loadData();
+      const semester = document.getElementById('subSemester').value;
       const name = document.getElementById('subName').value.trim();
       const prof = document.getElementById('subProf').value.trim();
       const credit = Number(document.getElementById('subCredit').value);
       const type = document.getElementById('subType').value;
       if (!name) return;
 
-      data.subjects.push({ id: 's' + Date.now(), name, prof, credit, type });
+      data.subjects.push({ id: 's' + Date.now(), semester, name, prof, credit, type });
+      data.selectedSemester = semester;
       saveData(data);
-      e.target.reset();
-      renderDashboard();
+      document.getElementById('subName').value = '';
+      document.getElementById('subProf').value = '';
+      initDashSemesters();
+    renderDashboard();
     });
 
     function deleteSubject(id) {
       const data = loadData();
       data.subjects = data.subjects.filter(s => s.id !== id);
       saveData(data);
-      renderDashboard();
+      initDashSemesters();
+    renderDashboard();
     }
 
+    initDashSemesters();
     renderDashboard();
   </script>
 </body>
